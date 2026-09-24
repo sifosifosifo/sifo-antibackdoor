@@ -191,7 +191,6 @@ end
 local function scanResource(resource)
     resourcesScanned = resourcesScanned + 1
 
-    -- fxmanifest / __resource
     local manifestFiles = {
         "fxmanifest.lua",
         "__resource.lua"
@@ -201,7 +200,6 @@ local function scanResource(resource)
         scanFile(resource, manifest)
     end
 
-    -- server scripts
     local serverCount =
         GetNumResourceMetadata(
             resource,
@@ -221,7 +219,6 @@ local function scanResource(resource)
         end
     end
 
-    -- client scripts
     local clientCount =
         GetNumResourceMetadata(
             resource,
@@ -241,7 +238,6 @@ local function scanResource(resource)
         end
     end
 
-    -- shared scripts
     local sharedCount =
         GetNumResourceMetadata(
             resource,
@@ -261,7 +257,6 @@ local function scanResource(resource)
         end
     end
 
-    -- files الموجودة في manifest
     local fileCount =
         GetNumResourceMetadata(
             resource,
