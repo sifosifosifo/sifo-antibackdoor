@@ -14,7 +14,6 @@ local Config = {
         css = true
     },
 
-    -- كلمات عالية الأهمية
     CriticalStrings = {
         "JohnsUrUncle",
         "admins.json",
