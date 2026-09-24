@@ -3,17 +3,42 @@ local RESOURCE_NAME = GetCurrentResourceName()
 local Config = {
     Discord = {
         Enabled = true,
-        -- Webhook for the channel that receives ALL findings.
         AllWebhook = "",
-        -- Webhook for the channel that receives CRITICAL findings only.
         CriticalWebhook = "",
+        AllWebhookConvar = "sifo_antibackdoor_all_webhook",
+        CriticalWebhookConvar = "sifo_antibackdoor_critical_webhook",
         SendCleanSummary = true,
-        MaxFindingsPerMessage = 8
+        MaxFindingsPerMessage = 6,
+        MinScoreForCritical = 80
+    },
+
+    Scanner = {
+        ScanDelay = 5000,
+        ScanOnResourceStart = true,
+        IgnoreOwnResource = true,
+        MaxCodePreview = 700,
+        MaxFindingsStored = 5000,
+        LongLineLength = 1800,
+        HugeStringLength = 900,
+        EntropyMinLength = 300,
+        EntropyThreshold = 4.6
     },
 
     LocalReport = {
         Enabled = false,
         OutputFile = "sifo_forensic.log"
+    },
+
+    Allowlist = {
+        Resources = {
+            -- "qb-core",
+            -- "ox_lib",
+            -- "my-trusted-resource"
+        },
+
+        Indicators = {
+            -- { resource = "my-resource", indicator = "PerformHttpRequest" }
+        }
     },
 
     ScanExtensions = {
@@ -27,236 +52,389 @@ local Config = {
         css = true
     },
 
-    CriticalStrings = {
-        "JohnsUrUncle",
-        "admins.json",
-        "txData",
-        "txAdmin",
-
-        "cipher-panel",
-        "cipher-panel.me",
-        "ketamin.cc",
-        "helperServer",
-        "Enchanced_Tabs",
-        "eszjqvpjhiou.mom",
-        "pqzskjptss",
-        "GlobalState.miauss",
-        "GlobalState.ggWP",
-        "all_permissions",
-        "RESOURCE_EXCLUDE_LIST",
-
-        "MpWxwQeLMRJaDFLKmxVIFNeVfzVKaTBiVRvjBoePYciqfpJzxjNPIXedbOtvIbpDxqdoJR"
-    },
-
-    -- عمليات يمكن استخدامها في Backdoors
-    SuspiciousStrings = {
-        "PerformHttpRequest",
-        "PerformHttpRequestInternal",
-
-        "SaveResourceFile",
-        "LoadResourceFile",
-
-        "ExecuteCommand",
-        "execute",
-
-        "os.execute",
-        "io.popen",
-
-        "loadstring",
-        "load(",
-        "assert(load",
-
-        "RunString",
-        "RunStringEx",
-
-        "AddEventHandler",
-        "RegisterNetEvent",
-        "TriggerServerEvent",
-        "TriggerClientEvent",
-
-        "webhook",
-        "discord.com/api/webhooks",
-
-        "http://",
-        "https://",
-
-        "GetConvar",
-        "GetConvarReplicated",
-
-        "Citizen.InvokeNative",
-        "StartResource",
-        "StopResource",
-        "package.loadlib",
-        "dofile(",
-        "debug.sethook",
-        "debug.getinfo",
-        "_G[",
-        "_ENV[",
-        "string.char",
-        "string.byte",
-        "Base64",
-        "base64",
-        "fromBase64",
-        "decode64"
+    CombinationRules = {
+        {
+            id = "remote_loader_network",
+            name = "Remote code loader + network",
+            required = {"loadstring", "PerformHttpRequest"},
+            score = 40,
+            severity = "CRITICAL",
+            category = "BACKDOOR"
+        },
+        {
+            id = "remote_loader_file",
+            name = "Remote code loader + resource file access",
+            required = {"loadstring", "LoadResourceFile"},
+            score = 35,
+            severity = "CRITICAL",
+            category = "BACKDOOR"
+        },
+        {
+            id = "remote_loader_obfuscation",
+            name = "Dynamic code + string obfuscation",
+            required = {"loadstring", "string.char"},
+            score = 35,
+            severity = "CRITICAL",
+            category = "OBFUSCATION"
+        },
+        {
+            id = "remote_loader_base64",
+            name = "Dynamic code + Base64 decoding",
+            required = {"loadstring", "base64"},
+            score = 35,
+            severity = "CRITICAL",
+            category = "OBFUSCATION"
+        },
+        {
+            id = "command_network",
+            name = "Command execution + network",
+            required = {"ExecuteCommand", "PerformHttpRequest"},
+            score = 30,
+            severity = "CRITICAL",
+            category = "BACKDOOR"
+        },
+        {
+            id = "write_start",
+            name = "Resource write + dynamic resource start",
+            required = {"SaveResourceFile", "StartResource"},
+            score = 30,
+            severity = "HIGH",
+            category = "RESOURCE_MANIPULATION"
+        },
+        {
+            id = "webhook_command",
+            name = "Webhook + command execution",
+            required = {"discord.com/api/webhooks", "ExecuteCommand"},
+            score = 25,
+            severity = "HIGH",
+            category = "EXFILTRATION"
+        },
+        {
+            id = "debug_obfuscation",
+            name = "Debug hook + dynamic globals",
+            required = {"debug.sethook", "_G["},
+            score = 25,
+            severity = "HIGH",
+            category = "ANTI_ANALYSIS"
+        },
+        {
+            id = "nui_server_trust",
+            name = "NUI callback + server event",
+            required = {"RegisterNUICallback", "RegisterNetEvent"},
+            score = 8,
+            severity = "LOW",
+            category = "EXPLOIT"
+        }
     }
 }
 
 local findings = {}
-
+local findingKeys = {}
+local resourceScores = {}
 local resourcesScanned = 0
 local filesScanned = 0
+local allowedResources = 0
 
-local function lower(text)
-    return string.lower(text or "")
+local function lower(value)
+    return string.lower(tostring(value or ""))
+end
+
+local function trim(value)
+    return tostring(value or ""):gsub("^%s+", ""):gsub("%s+$", "")
+end
+
+local function getWebhook(configValue, convarName)
+    local convar = GetConvar(convarName, "")
+    if convar and convar ~= "" then
+        return convar
+    end
+    return configValue
+end
+
+local function isResourceAllowed(resource)
+    for _, name in ipairs(Config.Allowlist.Resources) do
+        if lower(name) == lower(resource) then
+            return true
+        end
+    end
+    return false
+end
+
+local function isIndicatorAllowed(resource, indicator)
+    for _, item in ipairs(Config.Allowlist.Indicators) do
+        if item.resource and item.indicator
+            and lower(item.resource) == lower(resource)
+            and lower(item.indicator) == lower(indicator)
+        then
+            return true
+        end
+    end
+    return false
 end
 
 local function extensionOf(path)
-    local ext = path:match("%.([^%.]+)$")
+    local ext = tostring(path or ""):match("%.([^%.]+)$")
+    return ext and lower(ext) or nil
+end
 
-    if not ext then
-        return nil
+local function scoreLabel(score)
+    if score >= 80 then return "CRITICAL" end
+    if score >= 60 then return "HIGH" end
+    if score >= 30 then return "MEDIUM" end
+    if score > 0 then return "LOW" end
+    return "CLEAN"
+end
+
+local function addScore(resource, score)
+    resourceScores[resource] = math.min(
+        100,
+        (resourceScores[resource] or 0) + math.max(0, score or 0)
+    )
+end
+
+local function addFinding(data)
+    if not data or not data.resource or not data.file then
+        return
     end
 
-    return lower(ext)
+    if isIndicatorAllowed(
+        data.resource,
+        data.indicator or data.id or ""
+    ) then
+        return
+    end
+
+    local key = table.concat({
+        tostring(data.resource),
+        tostring(data.file),
+        tostring(data.line or 0),
+        tostring(data.id or data.indicator or ""),
+        tostring(data.category or "")
+    }, "|")
+
+    if findingKeys[key] then
+        return
+    end
+
+    if #findings >= Config.Scanner.MaxFindingsStored then
+        return
+    end
+
+    findingKeys[key] = true
+
+    data.severity = data.severity or "LOW"
+    data.score = tonumber(data.score) or 0
+    data.code = trim(data.code)
+        :gsub("\r", " ")
+        :gsub("\n", " ")
+
+    if #data.code > Config.Scanner.MaxCodePreview then
+        data.code =
+            data.code:sub(1, Config.Scanner.MaxCodePreview)
+            .. "..."
+    end
+
+    findings[#findings + 1] = data
+    addScore(data.resource, data.score)
 end
 
-local function addFinding(
-    severity,
-    resource,
-    file,
-    lineNumber,
-    keyword,
-    line
-)
-    findings[#findings + 1] = {
-        severity = severity,
-        resource = resource,
-        file = file,
-        line = lineNumber,
-        keyword = keyword,
-        code = line
-    }
+local function contains(text, needle)
+    return string.find(
+        lower(text),
+        lower(needle),
+        1,
+        true
+    ) ~= nil
 end
 
-local function searchLine(
-    resource,
-    file,
-    lineNumber,
-    line
-)
-    local lowerLine = lower(line)
+local function estimateEntropy(text)
+    local length = #text
+    if length < 1 then
+        return 0
+    end
 
-    for _, keyword in ipairs(Config.CriticalStrings) do
-        if string.find(
-            lowerLine,
-            lower(keyword),
-            1,
-            true
-        ) then
+    local counts = {}
 
-            addFinding(
-                "CRITICAL",
-                resource,
-                file,
-                lineNumber,
-                keyword,
-                line
+    for i = 1, length do
+        local byte = text:byte(i)
+        counts[byte] = (counts[byte] or 0) + 1
+    end
+
+    local entropy = 0
+
+    for _, count in pairs(counts) do
+        local p = count / length
+        entropy =
+            entropy
+            - (p * (math.log(p) / math.log(2)))
+    end
+
+    return entropy
+end
+
+local function scanThreatDatabase(resource, file, content)
+    local wholeLower = lower(content)
+
+    for _, threat in ipairs(SIFO_THREATS or {}) do
+        local marker = lower(threat.match)
+
+        if marker ~= ""
+            and string.find(
+                wholeLower,
+                marker,
+                1,
+                true
             )
+        then
+            local lineNumber = 0
+            local codeLine = ""
+
+            for line in content:gmatch("[^\r\n]+") do
+                lineNumber = lineNumber + 1
+
+                if contains(line, threat.match) then
+                    codeLine = line
+                    break
+                end
+            end
+
+            addFinding({
+                id = threat.id,
+                resource = resource,
+                file = file,
+                line = lineNumber,
+                indicator = threat.match,
+                category = threat.category,
+                severity = threat.severity,
+                score = threat.score,
+                reason = threat.reason,
+                code = codeLine
+            })
         end
     end
-
-    for _, keyword in ipairs(Config.SuspiciousStrings) do
-        if string.find(
-            lowerLine,
-            lower(keyword),
-            1,
-            true
-        ) then
-
-            addFinding(
-                "SUSPICIOUS",
-                resource,
-                file,
-                lineNumber,
-                keyword,
-                line
-            )
-        end
-    end
 end
 
-
-local CombinationRules = {
-    {
-        name = "Dynamic code execution + network",
-        require = {"loadstring", "PerformHttpRequest"}
-    },
-    {
-        name = "Dynamic code execution + resource file access",
-        require = {"loadstring", "LoadResourceFile"}
-    },
-    {
-        name = "Dynamic code execution + encoded strings",
-        require = {"loadstring", "string.char"}
-    },
-    {
-        name = "Runtime command execution + external request",
-        require = {"ExecuteCommand", "PerformHttpRequest"}
-    }
-}
-
-local function checkCombinations(resource, file, content)
+local function scanCombinations(resource, file, content)
     local whole = lower(content)
 
-    for _, rule in ipairs(CombinationRules) do
+    for _, rule in ipairs(Config.CombinationRules) do
         local matched = true
 
-        for _, required in ipairs(rule.require) do
-            if not string.find(whole, lower(required), 1, true) then
+        for _, required in ipairs(rule.required) do
+            if not string.find(
+                whole,
+                lower(required),
+                1,
+                true
+            ) then
                 matched = false
                 break
             end
         end
 
         if matched then
-            addFinding(
-                "CRITICAL",
-                resource,
-                file,
-                0,
-                table.concat(rule.require, " + "),
-                "",
-                rule.name
-            )
+            addFinding({
+                id = rule.id,
+                resource = resource,
+                file = file,
+                line = 0,
+                indicator = table.concat(
+                    rule.required,
+                    " + "
+                ),
+                category = rule.category,
+                severity = rule.severity,
+                score = rule.score,
+                reason = rule.name,
+                code = "Combination rule matched"
+            })
+        end
+    end
+end
+
+local function scanObfuscation(resource, file, content)
+    local maxLine = 0
+    local longestLine = ""
+
+    for line in content:gmatch("[^\r\n]+") do
+        if #line > maxLine then
+            maxLine = #line
+            longestLine = line
+        end
+
+        if #line >= Config.Scanner.HugeStringLength
+            and contains(line, "string.char")
+        then
+            addFinding({
+                id = "large_string_char_payload",
+                resource = resource,
+                file = file,
+                line = 0,
+                indicator = "string.char + very long line",
+                category = "OBFUSCATION",
+                severity = "CRITICAL",
+                score = 70,
+                reason = "Large character-construction payload",
+                code = line
+            })
+        end
+
+        local hexCount = 0
+
+        for _ in line:gmatch("\\x%x%x") do
+            hexCount = hexCount + 1
+        end
+
+        if hexCount >= 12 then
+            addFinding({
+                id = "hex_encoded_payload",
+                resource = resource,
+                file = file,
+                line = 0,
+                indicator = "\\xNN sequence",
+                category = "OBFUSCATION",
+                severity = "HIGH",
+                score = 45,
+                reason = "Many hexadecimal escape sequences suggest encoded content",
+                code = line
+            })
         end
     end
 
-    -- Obfuscation heuristics.
-    for line in content:gmatch("[^\r\n]+") do
-        if #line >= 1800 then
-            addFinding(
-                "SUSPICIOUS",
-                resource,
-                file,
-                0,
-                "VERY_LONG_LINE",
-                line,
-                "Very long line can indicate generated/obfuscated code"
-            )
-            break
-        end
+    if maxLine >= Config.Scanner.LongLineLength then
+        addFinding({
+            id = "very_long_line",
+            resource = resource,
+            file = file,
+            line = 0,
+            indicator = "VERY_LONG_LINE",
+            category = "OBFUSCATION",
+            severity = "MEDIUM",
+            score = 25,
+            reason = "Extremely long line can indicate generated or obfuscated code",
+            code = longestLine
+        })
+    end
 
-        if #line >= 900 and string.find(lower(line), "string.char", 1, true) then
-            addFinding(
-                "CRITICAL",
-                resource,
-                file,
-                0,
-                "OBFUSCATED_PAYLOAD",
-                line,
-                "Large string.char payload"
-            )
-            break
+    if #content >= Config.Scanner.EntropyMinLength then
+        local entropy = estimateEntropy(content)
+
+        if entropy >= Config.Scanner.EntropyThreshold then
+            addFinding({
+                id = "high_entropy_file",
+                resource = resource,
+                file = file,
+                line = 0,
+                indicator = string.format(
+                    "entropy %.2f",
+                    entropy
+                ),
+                category = "OBFUSCATION",
+                severity = "MEDIUM",
+                score = 20,
+                reason = "High byte entropy; inspect for packed or encoded content",
+                code = "Entropy analysis"
+            })
         end
     end
 end
@@ -264,11 +442,13 @@ end
 local function scanFile(resource, file)
     local extension = extensionOf(file)
 
-    if not extension then
+    if not extension
+        or not Config.ScanExtensions[extension]
+    then
         return
     end
 
-    if not Config.ScanExtensions[extension] then
+    if string.find(file, "*", 1, true) then
         return
     end
 
@@ -283,123 +463,78 @@ local function scanFile(resource, file)
 
     filesScanned = filesScanned + 1
 
-    local lineNumber = 0
+    scanThreatDatabase(resource, file, content)
+    scanCombinations(resource, file, content)
+    scanObfuscation(resource, file, content)
+end
 
-    for line in content:gmatch("[^\r\n]+") do
-        lineNumber = lineNumber + 1
-
-        searchLine(
+local function scanMetadataFiles(resource, metadataName)
+    local count =
+        GetNumResourceMetadata(
             resource,
-            file,
-            lineNumber,
-            line
-        )
-    end
+            metadataName
+        ) or 0
 
-    checkCombinations(resource, file, content)
+    for i = 0, count - 1 do
+        local file =
+            GetResourceMetadata(
+                resource,
+                metadataName,
+                i
+            )
+
+        if file and file ~= "" then
+            scanFile(resource, file)
+        end
+    end
 end
 
 local function scanResource(resource)
+    if not resource or resource == "" then
+        return
+    end
+
+    if Config.Scanner.IgnoreOwnResource
+        and resource == RESOURCE_NAME
+    then
+        return
+    end
+
     resourcesScanned = resourcesScanned + 1
 
-    local manifestFiles = {
-        "fxmanifest.lua",
-        "__resource.lua"
-    }
-
-    for _, manifest in ipairs(manifestFiles) do
-        scanFile(resource, manifest)
+    if isResourceAllowed(resource) then
+        allowedResources = allowedResources + 1
+        return
     end
 
-    local serverCount =
-        GetNumResourceMetadata(
-            resource,
-            "server_script"
-        ) or 0
+    scanFile(resource, "fxmanifest.lua")
+    scanFile(resource, "__resource.lua")
 
-    for i = 0, serverCount - 1 do
-        local file =
-            GetResourceMetadata(
-                resource,
-                "server_script",
-                i
-            )
-
-        if file then
-            scanFile(resource, file)
-        end
-    end
-
-    local clientCount =
-        GetNumResourceMetadata(
-            resource,
-            "client_script"
-        ) or 0
-
-    for i = 0, clientCount - 1 do
-        local file =
-            GetResourceMetadata(
-                resource,
-                "client_script",
-                i
-            )
-
-        if file then
-            scanFile(resource, file)
-        end
-    end
-
-    local sharedCount =
-        GetNumResourceMetadata(
-            resource,
-            "shared_script"
-        ) or 0
-
-    for i = 0, sharedCount - 1 do
-        local file =
-            GetResourceMetadata(
-                resource,
-                "shared_script",
-                i
-            )
-
-        if file then
-            scanFile(resource, file)
-        end
-    end
-
-    local fileCount =
-        GetNumResourceMetadata(
-            resource,
-            "file"
-        ) or 0
-
-    for i = 0, fileCount - 1 do
-        local file =
-            GetResourceMetadata(
-                resource,
-                "file",
-                i
-            )
-
-        if file then
-            scanFile(resource, file)
-        end
-    end
+    scanMetadataFiles(resource, "server_script")
+    scanMetadataFiles(resource, "client_script")
+    scanMetadataFiles(resource, "shared_script")
+    scanMetadataFiles(resource, "file")
 end
 
-
 local function discordRequest(webhook, payload)
-    if not Config.Discord.Enabled or not webhook or webhook == "" then
+    if not Config.Discord.Enabled
+        or not webhook
+        or webhook == ""
+    then
         return
     end
 
     PerformHttpRequest(
         webhook,
         function(statusCode)
-            if statusCode < 200 or statusCode >= 300 then
-                print("^1[SIFO] Discord webhook failed. HTTP "
-                    .. tostring(statusCode) .. "^7")
+            if statusCode < 200
+                or statusCode >= 300
+            then
+                print(
+                    "^1[SIFO] Discord webhook failed: HTTP "
+                    .. tostring(statusCode)
+                    .. "^7"
+                )
             end
         end,
         "POST",
@@ -410,32 +545,49 @@ local function discordRequest(webhook, payload)
     )
 end
 
-local function discordEmbed(webhook, title, description, severity)
+local function discordEmbed(
+    webhook,
+    title,
+    description,
+    color
+)
     if not webhook or webhook == "" then
         return
     end
 
-    local color = 3066993
+    discordRequest(
+        webhook,
+        {
+            username = "SIFO Anti Backdoor",
+            embeds = {{
+                title = title,
+                description = description,
+                color = color,
+                footer = {
+                    text = "SIFO Anti Backdoor"
+                },
+                timestamp =
+                    os.date(
+                        "!%Y-%m-%dT%H:%M:%SZ"
+                    )
+            }}
+        }
+    )
+end
 
-    if severity == "CRITICAL" then
-        color = 15158332
-    elseif severity == "SUSPICIOUS" then
-        color = 15844367
+local function getCriticalFindings()
+    local result = {}
+
+    for _, finding in ipairs(findings) do
+        if finding.severity == "CRITICAL"
+            or finding.score
+                >= Config.Discord.MinScoreForCritical
+        then
+            result[#result + 1] = finding
+        end
     end
 
-    discordRequest(webhook, {
-        username = "SIFO Anti Backdoor",
-        embeds = {{
-            title = title,
-            description = description,
-            color = color,
-            footer = {
-                text = "SIFO Anti Backdoor • "
-                    .. os.date("%Y-%m-%d %H:%M:%S")
-            },
-            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
-        }}
-    })
+    return result
 end
 
 local function formatFinding(finding)
@@ -444,319 +596,390 @@ local function formatFinding(finding)
         .. "/"
         .. tostring(finding.file)
 
-    if tonumber(finding.line) and finding.line > 0 then
-        location = location .. ":" .. tostring(finding.line)
-    end
-
-    local code = tostring(finding.code or "")
-        :gsub("\r", " ")
-        :gsub("\n", " ")
-        :gsub("|", "/")
-
-    if #code > 650 then
-        code = code:sub(1, 650) .. "..."
+    if tonumber(finding.line)
+        and finding.line > 0
+    then
+        location =
+            location
+            .. ":"
+            .. tostring(finding.line)
     end
 
     return "**"
         .. tostring(finding.severity)
-        .. "** "
+        .. " | "
+        .. tostring(finding.category)
+        .. " | +"
+        .. tostring(finding.score)
+        .. "**\n"
         .. location
-        .. "\nIndicator: "
-        .. tostring(finding.keyword)
-        .. "\nReason: "
-        .. tostring(finding.reason or finding.keyword)
-        .. "\nCode: "
-        .. code
+        .. "\nIndicator: ["
+        .. tostring(finding.indicator)
+        .. "]\nReason: "
+        .. tostring(finding.reason)
+        .. "\nCode: ["
+        .. tostring(finding.code)
+        .. "]"
 end
 
-local function sendDiscordFindings()
+local function sendDiscordList(
+    webhook,
+    title,
+    list,
+    color
+)
+    if not webhook
+        or webhook == ""
+        or #list == 0
+    then
+        return
+    end
+
+    local chunk = {}
+
+    for _, finding in ipairs(list) do
+        chunk[#chunk + 1] =
+            formatFinding(finding)
+
+        if #chunk
+            >= Config.Discord.MaxFindingsPerMessage
+        then
+            discordEmbed(
+                webhook,
+                title,
+                table.concat(
+                    chunk,
+                    "\n\n"
+                ),
+                color
+            )
+
+            chunk = {}
+        end
+    end
+
+    if #chunk > 0 then
+        discordEmbed(
+            webhook,
+            title,
+            table.concat(
+                chunk,
+                "\n\n"
+            ),
+            color
+        )
+    end
+end
+
+local function sendDiscordReport()
+    local allWebhook =
+        getWebhook(
+            Config.Discord.AllWebhook,
+            Config.Discord.AllWebhookConvar
+        )
+
+    local criticalWebhook =
+        getWebhook(
+            Config.Discord.CriticalWebhook,
+            Config.Discord.CriticalWebhookConvar
+        )
+
     local critical = 0
-    local suspicious = 0
+    local high = 0
+    local medium = 0
+    local low = 0
 
     for _, finding in ipairs(findings) do
         if finding.severity == "CRITICAL" then
             critical = critical + 1
-        elseif finding.severity == "SUSPICIOUS" then
-            suspicious = suspicious + 1
+        elseif finding.severity == "HIGH" then
+            high = high + 1
+        elseif finding.severity == "MEDIUM" then
+            medium = medium + 1
+        else
+            low = low + 1
         end
     end
 
-    if Config.Discord.SendCleanSummary or #findings > 0 then
-        local summary =
-            "Scan completed\n"
-            .. "Resources: " .. tostring(resourcesScanned) .. "\n"
-            .. "Files: " .. tostring(filesScanned) .. "\n"
-            .. "Findings: " .. tostring(#findings) .. "\n"
-            .. "Critical: " .. tostring(critical) .. "\n"
-            .. "Suspicious: " .. tostring(suspicious)
+    local summary =
+        "**SIFO Threat Intelligence Scan**\n"
+        .. "Resources: **"
+        .. tostring(resourcesScanned)
+        .. "**\n"
+        .. "Allowed: **"
+        .. tostring(allowedResources)
+        .. "**\n"
+        .. "Files: **"
+        .. tostring(filesScanned)
+        .. "**\n"
+        .. "Findings: **"
+        .. tostring(#findings)
+        .. "**\n"
+        .. "Critical: **"
+        .. tostring(critical)
+        .. "**\n"
+        .. "High: **"
+        .. tostring(high)
+        .. "**\n"
+        .. "Medium: **"
+        .. tostring(medium)
+        .. "**\n"
+        .. "Low: **"
+        .. tostring(low)
+        .. "**"
+
+    if Config.Discord.SendCleanSummary
+        or #findings > 0
+    then
+        local color = 3066993
+
+        if critical > 0 then
+            color = 15158332
+        elseif high > 0 then
+            color = 15844367
+        elseif medium > 0 then
+            color = 16776960
+        end
 
         discordEmbed(
-            Config.Discord.AllWebhook,
-            "SIFO Security Scan",
+            allWebhook,
+            "SIFO • Scan Summary",
             summary,
-            critical > 0 and "CRITICAL"
-                or (suspicious > 0 and "SUSPICIOUS" or "OK")
+            color
         )
     end
 
-    if #findings == 0 then
-        return
-    end
+    sendDiscordList(
+        allWebhook,
+        "SIFO • All Findings",
+        findings,
+        15844367
+    )
 
-    -- Channel 1: everything.
-    local all = {}
-
-    for _, finding in ipairs(findings) do
-        all[#all + 1] = formatFinding(finding)
-
-        if #all >= Config.Discord.MaxFindingsPerMessage then
-            discordEmbed(
-                Config.Discord.AllWebhook,
-                "SIFO • Findings",
-                table.concat(all, "\n\n"),
-                "SUSPICIOUS"
-            )
-            all = {}
-        end
-    end
-
-    if #all > 0 then
-        discordEmbed(
-            Config.Discord.AllWebhook,
-            "SIFO • Findings",
-            table.concat(all, "\n\n"),
-            "SUSPICIOUS"
-        )
-    end
-
-    -- Channel 2: CRITICAL only.
-    local criticalList = {}
-
-    for _, finding in ipairs(findings) do
-        if finding.severity == "CRITICAL" then
-            criticalList[#criticalList + 1] = formatFinding(finding)
-
-            if #criticalList >= Config.Discord.MaxFindingsPerMessage then
-                discordEmbed(
-                    Config.Discord.CriticalWebhook,
-                    "SIFO • CRITICAL ALERT",
-                    table.concat(criticalList, "\n\n"),
-                    "CRITICAL"
-                )
-                criticalList = {}
-            end
-        end
-    end
-
-    if #criticalList > 0 then
-        discordEmbed(
-            Config.Discord.CriticalWebhook,
-            "SIFO • CRITICAL ALERT",
-            table.concat(criticalList, "\n\n"),
-            "CRITICAL"
-        )
-    end
+    sendDiscordList(
+        criticalWebhook,
+        "SIFO • CRITICAL ALERT",
+        getCriticalFindings(),
+        15158332
+    )
 end
 
 local function writeReport()
-    local output = {}
-
-    output[#output + 1] = "SIFO FORENSIC SCAN"
-    output[#output + 1] = "TIME=" .. os.date("%Y-%m-%d %H:%M:%S")
-    output[#output + 1] = "RESOURCES=" .. tostring(resourcesScanned)
-    output[#output + 1] = "FILES=" .. tostring(filesScanned)
-    output[#output + 1] = "FINDINGS=" .. tostring(#findings)
-    output[#output + 1] = "----------------------------------------"
-
-    for _, finding in ipairs(findings) do
-        local code = tostring(finding.code or "")
-            :gsub("\r", " ")
-            :gsub("\n", " ")
-            :gsub("|", "/")
-
-        output[#output + 1] =
-            finding.severity
-            .. "|"
-            .. finding.resource
-            .. "|"
-            .. finding.file
-            .. "|LINE="
-            .. tostring(finding.line)
-            .. "|"
-            .. finding.keyword
-            .. "|"
-            .. code
-    end
-
-    local content = table.concat(output, "\n")
-
     if not Config.LocalReport.Enabled then
         return
     end
 
-    local success = SaveResourceFile(
+    local output = {
+        "SIFO THREAT INTELLIGENCE REPORT",
+        "TIME=" .. os.date("%Y-%m-%d %H:%M:%S"),
+        "RESOURCES=" .. tostring(resourcesScanned),
+        "FILES=" .. tostring(filesScanned),
+        "FINDINGS=" .. tostring(#findings),
+        "----------------------------------------"
+    }
+
+    for _, finding in ipairs(findings) do
+        output[#output + 1] =
+            tostring(finding.severity)
+            .. "|"
+            .. tostring(finding.score)
+            .. "|"
+            .. tostring(finding.category)
+            .. "|"
+            .. tostring(finding.resource)
+            .. "|"
+            .. tostring(finding.file)
+            .. "|LINE="
+            .. tostring(finding.line or 0)
+            .. "|"
+            .. tostring(finding.indicator)
+            .. "|"
+            .. tostring(finding.code)
+    end
+
+    local content =
+        table.concat(output, "\n")
+
+    SaveResourceFile(
         RESOURCE_NAME,
         Config.LocalReport.OutputFile,
         content,
         #content
     )
+end
 
-    print("")
-    print("^5========== SIFO REPORT =========^7")
+local function printResourceRisk()
+    local list = {}
 
-    print("^7Resource:^3 " .. RESOURCE_NAME .. "^7")
-    print("^7File:^3 " .. Config.LocalReport.OutputFile .. "^7")
-    print("^7Size:^3 " .. tostring(#content) .. " bytes^7")
-
-    if success then
-        print("^2[OK] Report saved successfully.^7")
-        print(
-            "^2[PATH] ^7resources/[...]/"
-            .. RESOURCE_NAME
-            .. "/"
-            .. Config.OutputFile
-        )
-    else
-        print("^1[ERROR] SaveResourceFile failed!^7")
+    for resource, score in pairs(resourceScores) do
+        list[#list + 1] = {
+            resource = resource,
+            score = score
+        }
     end
 
-    print("^5================================^7")
-    print("")
+    table.sort(
+        list,
+        function(a, b)
+            return a.score > b.score
+        end
+    )
+
+    print("^5[SIFO] Resource Risk Scores:^7")
+
+    if #list == 0 then
+        print("^2[SIFO] No findings.^7")
+        return
+    end
+
+    for _, item in ipairs(list) do
+        print(
+            "^3[SIFO] "
+            .. item.resource
+            .. " -> "
+            .. tostring(item.score)
+            .. "/100 ("
+            .. scoreLabel(item.score)
+            .. ")^7"
+        )
+    end
 end
 
 local function printSummary()
-
-    print("")
-    print("^5==============================================^7")
-    print("^5        SIFO FORENSIC SECURITY SCANNER^7")
-    print("^5==============================================^7")
-
-    print("^7Resources: ^3" .. resourcesScanned .. "^7")
-    print("^7Files:     ^3" .. filesScanned .. "^7")
-    print("^7Findings:  ^1" .. #findings .. "^7")
-
     local critical = 0
-    local suspicious = 0
+    local high = 0
+    local medium = 0
+    local low = 0
 
     for _, finding in ipairs(findings) do
         if finding.severity == "CRITICAL" then
             critical = critical + 1
+        elseif finding.severity == "HIGH" then
+            high = high + 1
+        elseif finding.severity == "MEDIUM" then
+            medium = medium + 1
         else
-            suspicious = suspicious + 1
+            low = low + 1
         end
     end
 
-    print("^1Critical:   " .. critical .. "^7")
-    print("^3Suspicious: " .. suspicious .. "^7")
-
-    print("^5----------------------------------------------^7")
-
-    if critical > 0 then
-        print("^1[!] CRITICAL INDICATORS FOUND^7")
-    elseif suspicious > 0 then
-        print("^3[!] Suspicious indicators found^7")
-    else
-        print("^2[OK] No configured indicators found^7")
-    end
-
-    print("^5----------------------------------------------^7")
-
-    local displayed = {}
-
-    for _, finding in ipairs(findings) do
-
-        local key =
-            finding.resource
-            .. "/"
-            .. finding.file
-            .. ":"
-            .. finding.keyword
-
-        if not displayed[key] then
-
-            displayed[key] = true
-
-            if finding.severity == "CRITICAL" then
-
-                print(
-                    "^1[CRITICAL]^7 "
-                    .. finding.resource
-                    .. "/"
-                    .. finding.file
-                    .. " -> "
-                    .. finding.keyword
-                )
-
-            else
-
-                print(
-                    "^3[SUSPICIOUS]^7 "
-                    .. finding.resource
-                    .. "/"
-                    .. finding.file
-                    .. " -> "
-                    .. finding.keyword
-                )
-            end
-        end
-    end
-
+    print("")
+    print("^5==============================================^7")
+    print("^5       SIFO THREAT INTELLIGENCE SCANNER^7")
+    print("^5==============================================^7")
+    print("^7Resources scanned: ^3"
+        .. tostring(resourcesScanned)
+        .. "^7")
+    print("^7Allowlisted:       ^3"
+        .. tostring(allowedResources)
+        .. "^7")
+    print("^7Files scanned:     ^3"
+        .. tostring(filesScanned)
+        .. "^7")
+    print("^7Findings:          ^3"
+        .. tostring(#findings)
+        .. "^7")
+    print("^1Critical:          "
+        .. tostring(critical)
+        .. "^7")
+    print("^1High:              "
+        .. tostring(high)
+        .. "^7")
+    print("^3Medium:            "
+        .. tostring(medium)
+        .. "^7")
+    print("^7Low:               "
+        .. tostring(low)
+        .. "^7")
     print("^5==============================================^7")
 
-    print(
-        "^7Report: ^3"
-        .. RESOURCE_NAME
-        .. "/"
-        .. Config.OutputFile
-        .. "^7"
-    )
+    printResourceRisk()
 
     print("^5==============================================^7")
     print("")
 end
 
+local scanRunning = false
+
 local function startScan()
+    if scanRunning then
+        print("^3[SIFO] A scan is already running.^7")
+        return
+    end
 
-    print("")
-    print("^5[SIFO] Starting forensic scan...^7")
+    scanRunning = true
 
-    local total =
-        GetNumResources()
+    findings = {}
+    findingKeys = {}
+    resourceScores = {}
+    resourcesScanned = 0
+    filesScanned = 0
+    allowedResources = 0
+
+    print(
+        "^5[SIFO] Threat intelligence scan started...^7"
+    )
+
+    local total = GetNumResources()
 
     for i = 0, total - 1 do
-
         local resource =
             GetResourceByFindIndex(i)
 
-        if resource
-            and resource ~= RESOURCE_NAME
-        then
-
+        if resource then
             scanResource(resource)
-
         end
     end
 
     writeReport()
-    sendDiscordFindings()
-
+    sendDiscordReport()
     printSummary()
+
+    scanRunning = false
 end
+
+RegisterCommand(
+    "sifo_scan",
+    function(source)
+        if source ~= 0 then
+            return
+        end
+
+        startScan()
+    end,
+    false
+)
+
+RegisterCommand(
+    "sifo_risk",
+    function(source)
+        if source ~= 0 then
+            return
+        end
+
+        printResourceRisk()
+    end,
+    false
+)
 
 AddEventHandler(
     "onResourceStart",
     function(resource)
-
         if resource ~= RESOURCE_NAME then
             return
         end
 
+        if not Config.Scanner.ScanOnResourceStart then
+            return
+        end
+
         CreateThread(function()
-
-            Wait(3000)
-
+            Wait(Config.Scanner.ScanDelay)
             startScan()
-
         end)
     end
 )
+
+if not SIFO_THREATS then
+    print("^1[SIFO] Threat database failed to load.^7")
+end
