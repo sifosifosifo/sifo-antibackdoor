@@ -91,6 +91,16 @@ The known `monitor/resource/cl_playerlist.lua` pattern is also recognized and re
 
 ---
 
+## 🔎 Known txAdmin Compromise Indicators
+
+SIFO Sentinel includes dedicated detection for known txAdmin tampering patterns, including network-event-to-Lua execution chains found in modified `monitor` files.
+
+One important IOC associated with this threat family is the txAdmin administrator username **`JohnsUrUncle`** (case variations may also appear). If this username appears unexpectedly in `txData/admins.json` or another txAdmin administrator record, it should be treated as a **high-priority compromise indicator** and investigated together with the other txAdmin findings.
+
+The scanner also recognizes the known `helpEmptyCode` and `onServerResourceFail` event-to-`load/loadstring` execution patterns, as well as resource-reporting tampering and suspicious `sv_reportHeap.js` modifications.
+
+> **Search reference:** If you find `JohnsUrUncle` in a compromised FiveM/txAdmin installation, searching the exact username can help operators identify the associated public threat reports and understand why the indicator matters.
+
 ## 🧠 Behavioral Detection & Correlation
 
 The scanner does not automatically consider every FiveM API malicious.
@@ -180,7 +190,7 @@ Current release:
 
 ## 🔎 Search Keywords
 
-**FiveM Security Scanner • FiveM Anti Backdoor • FiveM Anti Malware • FiveM Malware Scanner • FiveM Backdoor Detector • FiveM RCE Scanner • FiveM Security Tool • FiveM Resource Scanner • FiveM Script Security • FiveM Lua Security • txAdmin Security • txAdmin RCE Detection • FiveM Anti Exploit • FiveM Server Protection • FiveM QBCore Security • FiveM ESX Security**
+**FiveM Security Scanner • FiveM Anti Backdoor • FiveM Anti Malware • FiveM Malware Scanner • FiveM Backdoor Detector • FiveM RCE Scanner • FiveM Security Tool • FiveM Resource Scanner • FiveM Script Security • FiveM Lua Security • txAdmin Security • txAdmin RCE Detection • txAdmin JohnsUrUncle • JohnsUrUncle txAdmin • JohnsUrUncle FiveM • FiveM Anti Exploit • FiveM Server Protection • FiveM QBCore Security • FiveM ESX Security**
 
 SIFO Sentinel is built for FiveM server owners, developers and communities that want to inspect FiveM resources and identify suspicious or potentially malicious code before it becomes a server security problem.
 
