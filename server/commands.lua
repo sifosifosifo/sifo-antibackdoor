@@ -8,9 +8,15 @@ function SIFO.startScan()
     SIFO.reset()
 
     print("^5[SIFO] Threat intelligence scan started...^7")
-    SIFO.sendDiscordStart()
 
     local ok, err = xpcall(function()
+        if type(SIFO.sendDiscordStart) == "function" then
+            SIFO.sendDiscordStart()
+        else
+            print("^3[SIFO] Discord reporter is not loaded; continuing scan without the start notification.^7")
+            print("^3[SIFO] Check server/reporter.lua and fxmanifest.lua if Discord reporting is required.^7")
+        end
+
         SIFO.scanAllResources()
 
         if type(SIFO.waitForTrustedVerification) == "function" then
@@ -20,9 +26,22 @@ function SIFO.startScan()
             print("^3[SIFO] Ensure server/trusted_scanner.lua is present and restart the resource.^7")
         end
 
-        SIFO.writeReport()
-        SIFO.sendDiscordReport()
-        SIFO.printSummary()
+        if type(SIFO.writeReport) == "function" then
+            SIFO.writeReport()
+        end
+
+        if type(SIFO.sendDiscordReport) == "function" then
+            SIFO.sendDiscordReport()
+        else
+            print("^3[SIFO] Discord reporter is not loaded; Discord report skipped.^7")
+        end
+
+        if type(SIFO.printSummary) == "function" then
+            SIFO.printSummary()
+        else
+            print("^3[SIFO] Console summary module is not loaded.^7")
+            print("^7[SIFO] Findings: ^3" .. tostring(#(SIFO.Findings or {})) .. "^7")
+        end
     end, debug.traceback)
 
     SIFO.ScanRunning = false
@@ -84,4 +103,12 @@ end
 
 if type(SIFO.verifyTrustedResource) ~= "function" then
     print("^3[SIFO] Trusted-source verifier is not loaded. Check that server/trusted_scanner.lua is included in fxmanifest.lua.^7")
+end
+
+if type(SIFO.scanTxAdminEventRCE) ~= "function" then
+    print("^3[SIFO] txAdmin event scanner is not loaded.^7")
+end
+
+if type(SIFO.scanTxAdminTampering) ~= "function" then
+    print("^3[SIFO] txAdmin tamper scanner is not loaded.^7")
 end
