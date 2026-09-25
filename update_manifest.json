@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0",
+  "files": [
+    "updater.lua",
+    "version.txt",
+    "update_manifest.json",
+    "fxmanifest.lua",
+    "config.lua",
+    "threats.lua",
+    "rules.lua",
+    "server/main.lua",
+    "server/threat_scanner.lua",
+    "server/behavior_scanner.lua",
+    "server/rules_scanner.lua",
+    "server/resource_scanner.lua",
+    "server/reporter.lua",
+    "server/commands.lua"
+  ]
+}
