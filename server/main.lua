@@ -45,7 +45,27 @@ SIFO.CONTEXT_ONLY_THREATS = {
     raw_sql_execute = true,
     client_server_trust_money = true,
     inventory_mutation_sink = true,
-    dynamic_code_assert_load = true
+    dynamic_code_assert_load = true,
+
+    -- Weak standalone indicators are scanner context, not findings.
+    remote_code_loadstring = true,
+    remote_code_load = true,
+    resource_write = true,
+    resource_start = true,
+    resource_stop = true,
+    command_execution = true,
+    debug_hook = true,
+    string_char = true,
+    dofile = true,
+
+    -- Low-confidence combination rules are context only.
+    event_money_sink = true,
+    event_inventory_sink = true,
+    nui_money_sink = true,
+    nui_inventory_sink = true,
+    event_entity_lookup = true,
+    sql_event_boundary = true,
+    nui_server_trust = true
 }
 
 function SIFO.lower(value)
