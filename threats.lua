@@ -446,5 +446,54 @@ SIFO_THREATS = {
         score = 5,
         match = "AddStateBagChangeHandler",
         reason = "State bag handler; validate source/entity ownership"
-    }
+    },
+
+    {
+        id = "dynamic_code_assert_load",
+        category = "CODE_EXECUTION",
+        severity = "HIGH",
+        score = 60,
+        match = "assert(load(",
+        reason = "Dynamic code execution chain commonly used by remote loaders"
+    },
+    {
+        id = "environment_rebinding",
+        category = "ANTI_ANALYSIS",
+        severity = "MEDIUM",
+        score = 25,
+        match = "setfenv",
+        reason = "Environment rebinding can alter runtime execution context"
+    },
+    {
+        id = "client_server_trust_money",
+        category = "EXPLOIT",
+        severity = "MEDIUM",
+        score = 30,
+        match = "AddMoney",
+        reason = "Money mutation sink; server-side event inputs must be validated"
+    },
+    {
+        id = "inventory_mutation_sink",
+        category = "EXPLOIT",
+        severity = "MEDIUM",
+        score = 30,
+        match = "AddItem",
+        reason = "Inventory mutation sink; server-side event inputs must be validated"
+    },
+    {
+        id = "entity_network_control",
+        category = "EXPLOIT",
+        severity = "LOW",
+        score = 12,
+        match = "NetworkGetEntityFromNetworkId",
+        reason = "Network entity lookup; validate ownership and entity type"
+    },
+    {
+        id = "raw_sql_execute",
+        category = "EXPLOIT",
+        severity = "LOW",
+        score = 10,
+        match = "MySQL.query",
+        reason = "Database query sink; inspect interpolation and parameterization"
+    },
 }
