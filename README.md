@@ -141,7 +141,7 @@ If an update is available:
 
 Current release:
 
-**v1.0.11**
+**v1.0.12**
 
 ---
 
@@ -215,15 +215,18 @@ ensure sifo-antibackdoor
 
 ## ⚙️ Configuration
 
-Main settings are located in:
+All settings are located in:
 
 ```text
 config.lua
 ```
 
+For a private GitHub repository, set `Config.GitHub.Token` in `config.lua`. The updater never uses server.cfg convars.
+
 You can configure:
 
 - Discord reporting and webhook URLs
+- GitHub authentication for private repository updates
 - Scan delay
 - Automatic scanning
 - Resource allowlist
