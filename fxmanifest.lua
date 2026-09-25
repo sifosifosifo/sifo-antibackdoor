@@ -11,6 +11,7 @@ server_scripts {
     "server/main.lua",
     "server/sha1.lua",
     "server/threat_scanner.lua",
+    "server/txadmin_scanner.lua",
     "server/behavior_scanner.lua",
     "server/rules_scanner.lua",
     "server/resource_scanner.lua",
