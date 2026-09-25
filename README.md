@@ -7,15 +7,30 @@
 
 ---
 
-## 📢 SIFO Scripts
+<div align="center">
 
-> **SIFO Scripts — FiveM Development & Security**
->
-> 🔗 Discord: https://discord.gg/EkwWvFS
->
-> Get support, updates, releases and other SIFO scripts through the official Discord.
+# 🛒 SIFO STORE
+
+### 🚀 Take Your FiveM Server to the Next Level
+
+**Looking for quality FiveM scripts and resources for your server?**
+
+Explore the **SIFO Tebex Store** and discover the available resources.
+
+<br>
+
+<a href="https://sifo.tebex.store/" target="_blank">
+  <img src="https://img.shields.io/badge/🛍️%20VISIT%20SIFO%20STORE-FF6B00?style=for-the-badge&logo=shopify&logoColor=white" alt="Visit SIFO Store">
+</a>
+
+<br><br>
+
+**👉 https://sifo.tebex.store/**
+
+</div>
 
 ---
+
 
 ## ✨ Features
 
