@@ -7,11 +7,11 @@ Config = {
         -- Discord reporting is disabled in the standalone version.
         Enabled = true,
 
-        AllWebhook = "https://discord.com/api/webhooks/1552840835043696730/EubDeU7OFmSnrXGG--X43q0RoSYkBIWa4DU4X26yednwVnsA4toygwPN5DQwUfW1QlLg",
-        CriticalWebhook = "https://discord.com/api/webhooks/1552840902538563666/VAiElJSUt6yIHDL7dhfOW3xzVbicrJP2Zbd45Yexf5ptrLLhV-6kcxP6cLD6UvOvG0Pa",
+        AllWebhook = "",
+        CriticalWebhook = "",
 
-        AllWebhookConvar = "https://discord.com/api/webhooks/1552840972201893899/x12I_UuWTN_ZPo2R0FJyvUcn-Bw_iSihGEi_ngmNU0tAoakJgXfRsZfmKM8oV9_W9MnS",
-        CriticalWebhookConvar = "https://discord.com/api/webhooks/1552841040065593475/VteLOBStf9FvsnT_bjM2mlXgdkiIApN604ROe2wfHfenv-uCxgd7b8mvl5YB10IPB4xc",
+        AllWebhookConvar = "",
+        CriticalWebhookConvar = "",
 
         SendCleanSummary = false,
         MaxFindingsPerMessage = 6,
