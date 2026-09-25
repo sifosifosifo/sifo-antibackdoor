@@ -1,8 +1,4 @@
 -- SIFO Anti Backdoor - automatic updater
--- Checks the official GitHub repository on every resource start.
--- Updates are written to disk while the current process keeps running.
--- The new files are loaded on the next resource/server start.
-
 local UPDATE_MANIFEST_URL = "https://raw.githubusercontent.com/sifosifosifo/sifo-antibackdoor/main/update_manifest.json"
 local RESOURCE_NAME = GetCurrentResourceName()
 local LOCAL_VERSION_FILE = "version.txt"
@@ -19,10 +15,7 @@ end
 local function readLocalVersion()
     local value = LoadResourceFile(RESOURCE_NAME, LOCAL_VERSION_FILE)
     value = tostring(value or ""):gsub("%s+", "")
-    if value == "" then
-        return "0.0.0"
-    end
-    return value
+    return value ~= "" and value or "0.0.0"
 end
 
 local function versionParts(version)
@@ -33,14 +26,13 @@ end
 local function isNewer(remote, localVersion)
     local ra, rb, rc = versionParts(remote)
     local la, lb, lc = versionParts(localVersion)
-
     if ra ~= la then return ra > la end
     if rb ~= lb then return rb > lb end
     return rc > lc
 end
 
 local function log(message)
-    print(("^5[SIFO Updater]^7 %s"):format(message))
+    print(("[SIFO Updater] %s"):format(message))
 end
 
 local function updateFiles(manifest, localVersion)
@@ -51,9 +43,8 @@ local function updateFiles(manifest, localVersion)
     end
 
     log(("Update found: %s -> %s"):format(localVersion, manifest.version))
-    log("Downloading update files. Current code will remain active until the next start.")
+    log("Downloading update files. New code loads on the next restart.")
 
-    local downloaded = {}
     local index = 1
     local failed = false
 
@@ -63,16 +54,24 @@ local function updateFiles(manifest, localVersion)
 
         if not entry then
             if failed then
-                log("^1Update was incomplete. The old version marker was kept; it will retry on the next start.^7")
+                log("^1Update incomplete. Version marker was not changed; it will retry next start.^7")
                 return
             end
 
-            SaveResourceFile(RESOURCE_NAME, LOCAL_VERSION_FILE, tostring(manifest.version) .. "\\n", -1)
-            log(("^2Update %s downloaded successfully. Restart the resource/server to load it.^7"):format(manifest.version))
+            SaveResourceFile(RESOURCE_NAME, LOCAL_VERSION_FILE, tostring(manifest.version) .. "\n", -1)
+            log(("^2Update %s downloaded successfully.^7"):format(manifest.version))
             return
         end
 
-        local path = entry.path
+        local path = type(entry) == "string" and entry or entry.path
+
+        -- Customer-owned configuration must never be replaced by public updates.
+        if path == "config.lua" then
+            log("Skipping private config.lua")
+            nextFile()
+            return
+        end
+
         if type(path) ~= "string" or path == "" or path:find("%.%.", 1, true) then
             failed = true
             log(("^1Rejected invalid update path: %s^7"):format(tostring(path)))
@@ -81,6 +80,7 @@ local function updateFiles(manifest, localVersion)
         end
 
         local url = "https://raw.githubusercontent.com/sifosifosifo/sifo-antibackdoor/main/" .. path
+
         request(url, function(status, body)
             if status ~= 200 or body == "" then
                 failed = true
@@ -93,8 +93,6 @@ local function updateFiles(manifest, localVersion)
             if not ok then
                 failed = true
                 log(("^1Failed to save %s.^7"):format(path))
-            else
-                downloaded[#downloaded + 1] = path
             end
 
             nextFile()
