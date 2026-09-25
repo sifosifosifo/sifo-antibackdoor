@@ -3,11 +3,6 @@
 -- No server.cfg / convar setup is required.
 
 Config = {
-    GitHub = {
-        Enabled = true,
-        Token = ""
-    },
-
     Discord = {
         Enabled = true,
 
