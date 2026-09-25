@@ -161,15 +161,6 @@ SIFO_THREATS = {
         reason = "Process execution through pipe"
     },
     {
-        id = "native_dynamic_execution",
-        category = "CODE_EXECUTION",
-        severity = "HIGH",
-        score = 50,
-        match = "Citizen.InvokeNative",
-        reason = "Dynamic native invocation; context required"
-    },
-
-    {
         id = "outbound_http",
         category = "NETWORK",
         severity = "MEDIUM",
@@ -357,38 +348,6 @@ SIFO_THREATS = {
         reason = "Loads native libraries dynamically"
     },
 
-    {
-        id = "event_register",
-        category = "EVENT_SECURITY",
-        severity = "LOW",
-        score = 4,
-        match = "RegisterNetEvent",
-        reason = "Network event registration; normal API, inspect handler validation"
-    },
-    {
-        id = "server_event_trigger",
-        category = "EVENT_SECURITY",
-        severity = "LOW",
-        score = 4,
-        match = "TriggerServerEvent",
-        reason = "Client-to-server event trigger; normal API, inspect trust boundaries"
-    },
-    {
-        id = "client_event_trigger",
-        category = "EVENT_SECURITY",
-        severity = "LOW",
-        score = 4,
-        match = "TriggerClientEvent",
-        reason = "Server-to-client event trigger; inspect authorization"
-    },
-    {
-        id = "event_handler",
-        category = "EVENT_SECURITY",
-        severity = "LOW",
-        score = 2,
-        match = "AddEventHandler",
-        reason = "Event handler registration; informational"
-    },
 
     {
         id = "permissions_marker",
