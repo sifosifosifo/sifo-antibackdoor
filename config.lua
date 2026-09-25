@@ -10,8 +10,8 @@ Config = {
         AllWebhook = "",
         CriticalWebhook = "",
 
-        AllWebhookConvar = "",
-        CriticalWebhookConvar = "",
+        AllWebhookConvar = "sifo_all_webhook",
+        CriticalWebhookConvar = "sifo_critical_webhook",
 
         SendCleanSummary = false,
         MaxFindingsPerMessage = 6,
