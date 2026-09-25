@@ -102,17 +102,20 @@ function SIFO.scanObfuscation(resource, file, content)
 
         if #line >= Config.Scanner.HugeStringLength
             and SIFO.contains(line, "string.char")
+            and (SIFO.contains(line, "load(")
+                or SIFO.contains(line, "loadstring")
+                or SIFO.contains(line, "assert(load"))
         then
             SIFO.addFinding({
                 id = "large_string_char_payload",
                 resource = resource,
                 file = file,
                 line = 0,
-                indicator = "string.char + very long line",
+                indicator = "string.char + execution sink",
                 category = "OBFUSCATION",
                 severity = "CRITICAL",
                 score = 70,
-                reason = "Large character-construction payload",
+                reason = "Large character-construction payload combined with dynamic code execution",
                 code = line
             })
         end
@@ -122,17 +125,21 @@ function SIFO.scanObfuscation(resource, file, content)
             hexCount = hexCount + 1
         end
 
-        if hexCount >= 12 then
+        if hexCount >= 12
+            and (SIFO.contains(line, "load(")
+                or SIFO.contains(line, "loadstring")
+                or SIFO.contains(line, "assert(load"))
+        then
             SIFO.addFinding({
                 id = "hex_encoded_payload",
                 resource = resource,
                 file = file,
                 line = 0,
-                indicator = "\\xNN sequence",
+                indicator = "\\xNN + execution sink",
                 category = "OBFUSCATION",
                 severity = "HIGH",
                 score = 45,
-                reason = "Many hexadecimal escape sequences suggest encoded content",
+                reason = "Encoded hexadecimal content is combined with a Lua execution sink",
                 code = line
             })
         end
