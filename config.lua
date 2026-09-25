@@ -3,6 +3,11 @@
 -- No server.cfg / convar setup is required.
 
 Config = {
+    -- Public automatic updater. No customer token or private repository is required.
+    GitHub = {
+        Enabled = true
+    },
+
     Discord = {
         Enabled = true,
 
