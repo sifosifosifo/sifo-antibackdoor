@@ -1,17 +1,14 @@
 -- SIFO Sentinel
--- Zero-configuration security scanner.
--- No Discord/webhook/server.cfg setup is required.
+-- All customer configuration lives in this file.
+-- No server.cfg / convar setup is required.
 
 Config = {
     Discord = {
-        -- Discord reporting is disabled in the standalone version.
         Enabled = true,
 
+        -- Put your Discord webhook URLs here.
         AllWebhook = "",
         CriticalWebhook = "",
-
-        AllWebhookConvar = "sifo_all_webhook",
-        CriticalWebhookConvar = "sifo_critical_webhook",
 
         SendCleanSummary = false,
         MaxFindingsPerMessage = 6,
