@@ -72,44 +72,8 @@ function SIFO.sendDiscordList(webhook, title, list, color)
 end
 
 function SIFO.sendDiscordReport()
-    local allWebhook = SIFO.getWebhook(Config.Discord.AllWebhook, Config.Discord.AllWebhookConvar)
-    local criticalWebhook = SIFO.getWebhook(Config.Discord.CriticalWebhook, Config.Discord.CriticalWebhookConvar)
-
-    local critical, high, medium, low = 0, 0, 0, 0
-
-    for _, finding in ipairs(SIFO.Findings) do
-        if finding.severity == "CRITICAL" then
-            critical = critical + 1
-        elseif finding.severity == "HIGH" then
-            high = high + 1
-        elseif finding.severity == "MEDIUM" then
-            medium = medium + 1
-        else
-            low = low + 1
-        end
-    end
-
-    local summary = "**SIFO Threat Intelligence Scan**\n"
-        .. "Resources: **" .. tostring(SIFO.ResourcesScanned) .. "**\n"
-        .. "Allowed: **" .. tostring(SIFO.AllowedResources) .. "**\n"
-        .. "Files: **" .. tostring(SIFO.FilesScanned) .. "**\n"
-        .. "Findings: **" .. tostring(#SIFO.Findings) .. "**\n"
-        .. "Critical: **" .. tostring(critical) .. "**\n"
-        .. "High: **" .. tostring(high) .. "**\n"
-        .. "Medium: **" .. tostring(medium) .. "**\n"
-        .. "Low: **" .. tostring(low) .. "**"
-
-    if Config.Discord.SendCleanSummary or #SIFO.Findings > 0 then
-        local color = 3066993
-        if critical > 0 then color = 15158332
-        elseif high > 0 then color = 15844367
-        elseif medium > 0 then color = 16776960 end
-
-        SIFO.discordEmbed(allWebhook, "SIFO • Scan Summary", summary, color)
-    end
-
-    SIFO.sendDiscordList(allWebhook, "SIFO • All Findings", SIFO.Findings, 15844367)
-    SIFO.sendDiscordList(allWebhook, "SIFO • CRITICAL ALERT", SIFO.getCriticalFindings(), 15158332)
+    -- Standalone build: no external webhook or server.cfg configuration.
+    return
 end
 
 function SIFO.writeReport()
