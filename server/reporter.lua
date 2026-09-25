@@ -46,16 +46,12 @@ function SIFO.formatFindingEmbed(finding)
         { name = "📍 Location", value = "`" .. location .. "`", inline = false },
         { name = "🔎 Detected", value = "`" .. tostring(finding.indicator or "Security indicator") .. "`", inline = false },
         { name = "💡 What this means", value = tostring(finding.reason or "Suspicious behavior detected by static analysis."), inline = false },
-        { name = "🧪 Evidence", value = "```lua
-" .. tostring(finding.code or "No code preview available.") .. "
-```", inline = false }
+        { name = "🧪 Evidence", value = "```lua\n" .. tostring(finding.code or "No code preview available.") .. "\n```", inline = false }
     }
 
     return {
         title = icon .. " " .. severityLabel,
-        description = "**A security issue was detected in your FiveM server.**
-
-"
+        description = "**A security issue was detected in your FiveM server.**\n\n"
             .. "This alert is based on SIFO Sentinel's static/behavioral analysis. "
             .. "Review the evidence before taking action.",
         color = color,
