@@ -122,18 +122,18 @@ end
 function SIFO.sendDiscordList(webhook, title, list, color, limit)
     if not webhook or webhook == "" or #list == 0 then return end
     local maxItems = limit or Config.Discord.MaxFindingsPerMessage or 6
-    local chunk = {}
     local sent = 0
+
     for _, finding in ipairs(list) do
         if sent >= maxItems then break end
-        chunk[#chunk + 1] = SIFO.formatFinding(finding)
+        local embed = SIFO.formatFindingEmbed(finding)
+        embed.title = embed.title .. " • " .. tostring(finding.id or "Security Finding")
+        SIFO.discordRequest(webhook, {
+            username = "SIFO Sentinel",
+            embeds = { embed }
+        })
         sent = sent + 1
-        if #chunk >= Config.Discord.MaxFindingsPerMessage then
-            SIFO.discordEmbed(webhook, title, table.concat(chunk, "\n\n"), color)
-            chunk = {}
-        end
     end
-    if #chunk > 0 then SIFO.discordEmbed(webhook, title, table.concat(chunk, "\n\n"), color) end
 end
 
 function SIFO.sendDiscordVerificationReport()
