@@ -12,12 +12,61 @@ local function getCriticalWebhook()
     return webhook
 end
 
-function SIFO.formatFinding(finding)
+function SIFO.severityStyle(severity)
+    severity = SIFO.upper and SIFO.upper(severity) or string.upper(tostring(severity or "LOW"))
+    if severity == "CRITICAL" then return "🚨", 15158332, "CRITICAL • IMMEDIATE ATTENTION"
+    if severity == "HIGH" then return "🔴", 16744192, "HIGH • INVESTIGATE"
+    if severity == "MEDIUM" then return "🟠", 16776960, "MEDIUM • REVIEW"
+    return "🟡", 16705372, "LOW • INFORMATION"
+end
+
+function SIFO.categoryLabel(category)
+    local labels = {
+        CODE_EXECUTION = "Code Execution",
+        TAMPERING = "File Tampering",
+        DEFENSE_EVASION = "Defense Evasion",
+        OBFUSCATION = "Obfuscation",
+        SUPPLY_CHAIN = "Supply Chain",
+        EXFILTRATION = "Data Exposure",
+        EXPLOIT = "Security Boundary",
+        RESOURCE_MANIPULATION = "Resource Manipulation"
+    }
+    return labels[tostring(category)] or tostring(category or "Security")
+end
+
+function SIFO.formatFindingEmbed(finding)
+    local icon, color, severityLabel = SIFO.severityStyle(finding.severity)
     local location = tostring(finding.resource) .. "/" .. tostring(finding.file)
     if tonumber(finding.line) and finding.line > 0 then location = location .. ":" .. tostring(finding.line) end
-    return "**" .. tostring(finding.severity) .. " | " .. tostring(finding.category) .. " | +" .. tostring(finding.score) .. "**\n"
-        .. location .. "\nIndicator: [" .. tostring(finding.indicator) .. "]"
-        .. "\nReason: " .. tostring(finding.reason) .. "\nCode: [" .. tostring(finding.code) .. "]"
+
+    local fields = {
+        { name = "🧩 Resource", value = "`" .. tostring(finding.resource) .. "`", inline = true },
+        { name = "📄 File", value = "`" .. tostring(finding.file) .. "`", inline = true },
+        { name = "🏷️ Type", value = SIFO.categoryLabel(finding.category), inline = true },
+        { name = "📍 Location", value = "`" .. location .. "`", inline = false },
+        { name = "🔎 Detected", value = "`" .. tostring(finding.indicator or "Security indicator") .. "`", inline = false },
+        { name = "💡 What this means", value = tostring(finding.reason or "Suspicious behavior detected by static analysis."), inline = false },
+        { name = "🧪 Evidence", value = "```lua
+" .. tostring(finding.code or "No code preview available.") .. "
+```", inline = false }
+    }
+
+    return {
+        title = icon .. " " .. severityLabel,
+        description = "**A security issue was detected in your FiveM server.**
+
+"
+            .. "This alert is based on SIFO Sentinel's static/behavioral analysis. "
+            .. "Review the evidence before taking action.",
+        color = color,
+        fields = fields,
+        footer = { text = "SIFO Sentinel • FiveM Security Scanner • Finding Score +" .. tostring(finding.score or 0) },
+        timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+    }
+end
+
+function SIFO.formatFinding(finding)
+    return SIFO.formatFindingEmbed(finding)
 end
 
 function SIFO.discordRequest(webhook, payload)
