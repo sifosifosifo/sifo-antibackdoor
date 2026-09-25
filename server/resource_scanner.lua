@@ -24,10 +24,7 @@ end
 
 function SIFO.scanResource(resource)
     if not resource or resource == "" then return end
-
-    if Config.Scanner.IgnoreOwnResource and resource == SIFO.ResourceName then
-        return
-    end
+    if Config.Scanner.IgnoreOwnResource and resource == SIFO.ResourceName then return end
 
     SIFO.ResourcesScanned = SIFO.ResourcesScanned + 1
 
@@ -42,6 +39,10 @@ function SIFO.scanResource(resource)
     SIFO.scanMetadataFiles(resource, "client_script")
     SIFO.scanMetadataFiles(resource, "shared_script")
     SIFO.scanMetadataFiles(resource, "file")
+
+    if SIFO.verifyTrustedResource then
+        SIFO.verifyTrustedResource(resource)
+    end
 end
 
 function SIFO.scanAllResources()
