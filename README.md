@@ -64,13 +64,11 @@ Explore the **SIFO Tebex Store** and discover the available resources.
 
 ### Server Console
 
-> Add your console screenshot here.
 
 ![SIFO Sentinel Console](docs/images/console.png)
 
 ### Discord Alerts
 
-> Add your Discord alert screenshot here.
 
 ![SIFO Sentinel Discord](docs/images/discord.png)
 
@@ -171,7 +169,7 @@ This prevents large scans from producing a flood of webhook requests and reduces
 
 Current release:
 
-**v1.0.13**
+**v1.0.0**
 
 ---
 
