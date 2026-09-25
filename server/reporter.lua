@@ -91,8 +91,13 @@ function SIFO.sendDiscordVerificationReport()
     local webhook = getDiscordWebhook()
     if not webhook then return end
 
+    if type(SIFO.getVerificationSummary) ~= "function" then
+        print("^3[SIFO] Official-source verification report skipped: verifier module is not loaded.^7")
+        return
+    end
+
     local summary = SIFO.getVerificationSummary()
-    local modified, unavailable = {}, {}
+        local modified, unavailable = {}, {}
 
     for _, result in ipairs(SIFO.VerificationResults or {}) do
         if result.status == "MODIFIED" then
@@ -181,7 +186,9 @@ end
 
 function SIFO.writeReport()
     if not Config.LocalReport.Enabled then return end
-    local verification = SIFO.getVerificationSummary()
+    local verification = type(SIFO.getVerificationSummary) == "function"
+        and SIFO.getVerificationSummary()
+        or { verified = 0, modified = 0, unavailable = 0 }
     local output = {
         "SIFO THREAT INTELLIGENCE REPORT",
         "TIME=" .. os.date("%Y-%m-%d %H:%M:%S"),
@@ -211,7 +218,9 @@ end
 function SIFO.printSummary()
     local counts = { CRITICAL = 0, HIGH = 0, MEDIUM = 0, LOW = 0 }
     for _, finding in ipairs(SIFO.Findings) do counts[finding.severity] = (counts[finding.severity] or 0) + 1 end
-    local verification = SIFO.getVerificationSummary()
+    local verification = type(SIFO.getVerificationSummary) == "function"
+        and SIFO.getVerificationSummary()
+        or { verified = 0, modified = 0, unavailable = 0 }
     print("")
     print("^5==============================================^7")
     print("^5       SIFO THREAT INTELLIGENCE SCANNER^7")
