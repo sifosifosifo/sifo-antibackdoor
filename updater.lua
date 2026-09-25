@@ -5,8 +5,12 @@ local LOCAL_VERSION_FILE = "version.txt"
 local function request(url, callback)
     local headers = {
         ["User-Agent"] = "SIFO-AntiBackdoor-Updater",
-        ["Accept"] = "application/json, text/plain, */*"
+        ["Accept"] = "application/vnd.github+json"
     }
+
+    if Config and Config.GitHub and Config.GitHub.Enabled and type(Config.GitHub.Token) == "string" and Config.GitHub.Token ~= "" then
+        headers["Authorization"] = "Bearer " .. Config.GitHub.Token
+    end
 
     PerformHttpRequest(url, function(status, body)
         callback(status, body or "")
