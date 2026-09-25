@@ -186,10 +186,115 @@ local function scanThreatDatabase(resource, file, content)
     end
 end
 
+local function scanTxAdminEventRCE(resource, file, content)
+    local normalizedPath = lower(file):gsub("\\\\", "/")
+    local isKnownMonitorFile =
+        normalizedPath:find("monitor/resource/cl_playerlist.lua", 1, true)
+        ~= nil
+
+    local function addTxFinding(eventName, argumentName, sink, execution)
+        addFinding({
+            id = "TXADMIN_MONITOR_EVENT_RCE",
+            resource = resource,
+            file = file,
+            line = 0,
+            indicator = eventName or "EVENT_TO_CODE_EXECUTION",
+            category = "CODE_EXECUTION",
+            severity = "CRITICAL",
+            score = 100,
+            reason =
+                "Event-controlled Lua code execution: "
+                .. "network event callback argument reaches load/loadstring "
+                .. "and the returned function is executed",
+            code =
+                "Event: " .. tostring(eventName or "unknown")
+                .. " | Argument: " .. tostring(argumentName or "unknown")
+                .. " | Sink: " .. tostring(sink)
+                .. " | Execution: " .. tostring(execution)
+        })
+    end
+
+    -- Known txAdmin monitor IOC. The name alone is not enough for the
+    -- behavioral rule, so require the complete event-to-load-to-execution chain.
+    for eventName, params, handlerStart in content:gmatch(
+        "[Aa][Dd][Dd][Ee][Vv][Ee][Nn][Tt][Hh][Aa][Nn][Dd][Ll][Ee][Rr]%s*%(%s*[\"']([^\"']+)[\"']%s*,%s*[Ff][Uu][Nn][Cc][Tt][Ii][Oo][Nn]%s*%(([^)]*)%)"
+    ) do
+        local body = content:sub(handlerStart or 1, (handlerStart or 1) + 12000)
+        local firstArg = trim(params:match("^%s*([%w_]+)") or "")
+
+        if firstArg ~= "" then
+            local escapedArg = firstArg:gsub("([^%w_])", "%%%1")
+            local loadSink =
+                body:match("[Ll][Oo][Aa][Dd]%s*%(%s*"..escapedArg.."%s*%)")
+                or body:match("[Ll][Oo][Aa][Dd][Ss][Tt][Rr][Ii][Nn][Gg]%s*%(%s*"..escapedArg.."%s*%)")
+            local pcallLoad =
+                body:match("[Pp][Cc][Aa][Ll][Ll]%s*%(%s*[Ll][Oo][Aa][Dd]%s*,%s*"..escapedArg.."%s*%)")
+                or body:match("[Pp][Cc][Aa][Ll][Ll]%s*%(%s*[Ll][Oo][Aa][Dd][Ss][Tt][Rr][Ii][Nn][Gg]%s*,%s*"..escapedArg.."%s*%)")
+
+            if loadSink or pcallLoad then
+                local returnedFn =
+                    body:match("[Ll][Oo][Cc][Aa][Ll]%s+([%w_]+)%s*=%s*[Ll][Oo][Aa][Dd]%s*%(%s*"..escapedArg.."%s*%)")
+                    or body:match("[Ll][Oo][Cc][Aa][Ll]%s+([%w_]+)%s*=%s*[Ll][Oo][Aa][Dd][Ss][Tt][Rr][Ii][Nn][Gg]%s*%(%s*"..escapedArg.."%s*%)")
+
+                local executed =
+                    returnedFn
+                    and (
+                        body:match("[Pp][Cc][Aa][Ll][Ll]%s*%(%s*"..returnedFn:gsub("([^%w_])", "%%%1").."%s*%)")
+                        or body:match("[Xx][Pp][Cc][Aa][Ll][Ll]%s*%(%s*"..returnedFn:gsub("([^%w_])", "%%%1").."%s*[,)]")
+                        or body:match("[^%w_]"..returnedFn:gsub("([^%w_])", "%%%1").."%s*%(")
+                    )
+                local directExecution =
+                    body:match("[Pp][Cc][Aa][Ll][Ll]%s*%(%s*[Ll][Oo][Aa][Dd]%s*%(%s*"..escapedArg.."%s*%)")
+                    or body:match("[Pp][Cc][Aa][Ll][Ll]%s*%(%s*[Ll][Oo][Aa][Dd][Ss][Tt][Rr][Ii][Nn][Gg]%s*%(%s*"..escapedArg.."%s*%)")
+
+                if executed or directExecution then
+                    local registered =
+                        body:find("[Rr][Ee][Gg][Ii][Ss][Tt][Ee][Rr][Nn][Ee][Tt][Ee][Vv][Ee][Nn][Tt]", 1, false)
+                        or content:find(
+                            "[Rr][Ee][Gg][Ii][Ss][Tt][Ee][Rr][Nn][Ee][Tt][Ee][Vv][Ee][Nn][Tt]%s*%(%s*[\"']"
+                            .. eventName:gsub("([^%w_])", "%%%1")
+                            .. "[\"']",
+                            1,
+                            false
+                        )
+
+                    if registered then
+                        addTxFinding(
+                            eventName,
+                            firstArg,
+                            loadSink and "load()" or "loadstring()",
+                            returnedFn and "pcall/xpcall/fn()" or "pcall(load, ...)"
+                        )
+                    end
+                end
+            end
+        end
+    end
+
+    -- Strong known-file fallback: require the known IOC plus all critical
+    -- primitives. This catches formatting/variable-name changes in the
+    -- original txAdmin monitor file without treating the event name alone
+    -- as a vulnerability.
+    if isKnownMonitorFile
+        and contains(content, "helpEmptyCode")
+        and contains(content, "RegisterNetEvent")
+        and contains(content, "AddEventHandler")
+        and contains(content, "load")
+        and contains(content, "pcall")
+    then
+        addTxFinding(
+            "helpEmptyCode",
+            "id",
+            "load()",
+            "pcall(funcOrErr)"
+        )
+    end
+end
+
 local function scanCombinations(resource, file, content)
     local whole = lower(content)
 
-    for _, rule in ipairs(Config.CombinationRules) do
+    for _, rule in ipairs(SIFO_COMBINATION_RULES or {}) do
         local matched = true
 
         for _, required in ipairs(rule.required) do
@@ -336,6 +441,7 @@ local function scanFile(resource, file)
     filesScanned = filesScanned + 1
 
     scanThreatDatabase(resource, file, content)
+    scanTxAdminEventRCE(resource, file, content)
     scanCombinations(resource, file, content)
     scanObfuscation(resource, file, content)
 end
