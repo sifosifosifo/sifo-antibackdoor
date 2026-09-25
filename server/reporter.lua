@@ -16,18 +16,18 @@ function SIFO.severityStyle(severity)
     severity = string.upper(tostring(severity or "LOW"))
 
     if severity == "CRITICAL" then
-        return "CRITICAL", 15158332, "CRITICAL - IMMEDIATE ATTENTION"
+        return "🚨", 15158332, "CRITICAL - IMMEDIATE ATTENTION"
     end
 
     if severity == "HIGH" then
-        return "HIGH", 16744192, "HIGH - INVESTIGATE"
+        return "🔴", 16744192, "HIGH - INVESTIGATE"
     end
 
     if severity == "MEDIUM" then
-        return "MEDIUM", 16776960, "MEDIUM - REVIEW"
+        return "🟠", 16776960, "MEDIUM - REVIEW"
     end
 
-    return "LOW", 16705372, "LOW - INFORMATION"
+    return "🟡", 16705372, "LOW - INFORMATION"
 end
 
 function SIFO.categoryLabel(category)
@@ -75,13 +75,69 @@ function SIFO.formatFinding(finding)
     return SIFO.formatFindingEmbed(finding)
 end
 
+SIFO.DiscordQueue = SIFO.DiscordQueue or {}
+SIFO.DiscordWorkerRunning = SIFO.DiscordWorkerRunning or false
+SIFO.DiscordNextSendAt = SIFO.DiscordNextSendAt or 0
+
+local function discordRetryDelay(headers)
+    local retryAfter = tonumber(headers and (headers["retry-after"] or headers["Retry-After"]))
+    if retryAfter then
+        -- Discord Retry-After is normally expressed in seconds.
+        return math.min(math.max((retryAfter * 1000) + 250, 1000), 60000)
+    end
+    return 5000
+end
+
+local function startDiscordWorker()
+    if SIFO.DiscordWorkerRunning then return end
+    SIFO.DiscordWorkerRunning = true
+
+    CreateThread(function()
+        while #SIFO.DiscordQueue > 0 do
+            local item = table.remove(SIFO.DiscordQueue, 1)
+            local now = GetGameTimer()
+
+            if SIFO.DiscordNextSendAt > now then
+                Wait(SIFO.DiscordNextSendAt - now)
+            end
+
+            local finished = false
+            local retryDelay = 0
+
+            PerformHttpRequest(item.webhook, function(statusCode, _, headers)
+                if statusCode == 429 then
+                    retryDelay = discordRetryDelay(headers)
+                    SIFO.DiscordNextSendAt = GetGameTimer() + retryDelay
+
+                    -- Put the request back at the front; it will be retried after the delay.
+                    table.insert(SIFO.DiscordQueue, 1, item)
+                elseif statusCode < 200 or statusCode >= 300 then
+                    print("^1[SIFO] Discord webhook failed: HTTP " .. tostring(statusCode) .. "^7")
+                    SIFO.DiscordNextSendAt = GetGameTimer() + 1000
+                else
+                    -- Conservative pacing prevents bursts from triggering Discord rate limits.
+                    SIFO.DiscordNextSendAt = GetGameTimer() + 1200
+                end
+
+                finished = true
+            end, "POST", json.encode(item.payload), { ["Content-Type"] = "application/json" })
+
+            while not finished do Wait(50) end
+        end
+
+        SIFO.DiscordWorkerRunning = false
+    end)
+end
+
 function SIFO.discordRequest(webhook, payload)
     if not Config.Discord.Enabled or not webhook or webhook == "" then return end
-    PerformHttpRequest(webhook, function(statusCode)
-        if statusCode < 200 or statusCode >= 300 then
-            print("^1[SIFO] Discord webhook failed: HTTP " .. tostring(statusCode) .. "^7")
-        end
-    end, "POST", json.encode(payload), { ["Content-Type"] = "application/json" })
+
+    SIFO.DiscordQueue[#SIFO.DiscordQueue + 1] = {
+        webhook = webhook,
+        payload = payload
+    }
+
+    startDiscordWorker()
 end
 
 function SIFO.discordEmbed(webhook, title, description, color, fields, footer)
@@ -129,17 +185,32 @@ end
 function SIFO.sendDiscordList(webhook, title, list, color, limit)
     if not webhook or webhook == "" or #list == 0 then return end
     local maxItems = limit or Config.Discord.MaxFindingsPerMessage or 6
-    local sent = 0
+    local embeds = {}
+    local count = 0
 
     for _, finding in ipairs(list) do
-        if sent >= maxItems then break end
+        if count >= maxItems then break end
+
         local embed = SIFO.formatFindingEmbed(finding)
         embed.title = embed.title .. " • " .. tostring(finding.id or "Security Finding")
+        embeds[#embeds + 1] = embed
+        count = count + 1
+
+        -- Discord accepts up to 10 embeds per webhook request.
+        if #embeds >= 10 then
+            SIFO.discordRequest(webhook, {
+                username = "SIFO Sentinel",
+                embeds = embeds
+            })
+            embeds = {}
+        end
+    end
+
+    if #embeds > 0 then
         SIFO.discordRequest(webhook, {
             username = "SIFO Sentinel",
-            embeds = { embed }
+            embeds = embeds
         })
-        sent = sent + 1
     end
 end
 
