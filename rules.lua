@@ -70,5 +70,94 @@ SIFO_COMBINATION_RULES = {
         score = 8,
         severity = "LOW",
         category = "EXPLOIT"
-    }
+    },
+
+    {
+        id = "http_download_execute",
+        name = "Network request + dynamic code execution",
+        required = {"PerformHttpRequest", "load("},
+        score = 45,
+        severity = "CRITICAL",
+        category = "BACKDOOR"
+    },
+    {
+        id = "http_download_loadstring",
+        name = "Network request + loadstring execution",
+        required = {"PerformHttpRequest", "loadstring"},
+        score = 45,
+        severity = "CRITICAL",
+        category = "BACKDOOR"
+    },
+    {
+        id = "assert_load_network",
+        name = "Network request + assert(load())",
+        required = {"PerformHttpRequest", "assert(load("},
+        score = 55,
+        severity = "CRITICAL",
+        category = "CODE_EXECUTION"
+    },
+    {
+        id = "download_write_execute",
+        name = "Network + resource write + execution",
+        required = {"PerformHttpRequest", "SaveResourceFile", "loadstring"},
+        score = 55,
+        severity = "CRITICAL",
+        category = "RESOURCE_MANIPULATION"
+    },
+    {
+        id = "event_money_sink",
+        name = "Network event + money mutation sink",
+        required = {"RegisterNetEvent", "AddEventHandler", "AddMoney"},
+        score = 25,
+        severity = "MEDIUM",
+        category = "EXPLOIT"
+    },
+    {
+        id = "event_inventory_sink",
+        name = "Network event + inventory mutation sink",
+        required = {"RegisterNetEvent", "AddEventHandler", "AddItem"},
+        score = 25,
+        severity = "MEDIUM",
+        category = "EXPLOIT"
+    },
+    {
+        id = "nui_money_sink",
+        name = "NUI callback + money mutation",
+        required = {"RegisterNUICallback", "AddMoney"},
+        score = 25,
+        severity = "MEDIUM",
+        category = "EXPLOIT"
+    },
+    {
+        id = "nui_inventory_sink",
+        name = "NUI callback + inventory mutation",
+        required = {"RegisterNUICallback", "AddItem"},
+        score = 25,
+        severity = "MEDIUM",
+        category = "EXPLOIT"
+    },
+    {
+        id = "event_entity_lookup",
+        name = "Network event + network entity lookup",
+        required = {"RegisterNetEvent", "NetworkGetEntityFromNetworkId"},
+        score = 18,
+        severity = "MEDIUM",
+        category = "EXPLOIT"
+    },
+    {
+        id = "sql_event_boundary",
+        name = "Network event + database query",
+        required = {"RegisterNetEvent", "AddEventHandler", "MySQL.query"},
+        score = 12,
+        severity = "LOW",
+        category = "EXPLOIT"
+    },
+    {
+        id = "debug_dynamic_execution",
+        name = "Debug hook + dynamic execution",
+        required = {"debug.sethook", "loadstring"},
+        score = 45,
+        severity = "HIGH",
+        category = "ANTI_ANALYSIS"
+    },
 }
