@@ -92,7 +92,7 @@ function SIFO.scanBehavioralSecurity(resource, file, content)
         if SIFO.contains(whole, "server_script")
             and (SIFO.contains(whole, "http://") or SIFO.contains(whole, "https://"))
         then
-            report("BEHAVIOR_REMOTE_MANIFEST_DEPENDENCY", "SUPPLY_CHAIN", "HIGH", 35,
+            report("BEHAVIOR_REMOTE_MANIFEST_DEPENDENCY", "SUPPLY_CHAIN", "LOW", 5,
                 "Resource manifest references a network URL near server-side script declarations",
                 "Manifest + remote URL")
         end
