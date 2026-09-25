@@ -1,3 +1,14 @@
+SIFO.ScanYieldCounter = SIFO.ScanYieldCounter or 0
+
+local function yieldScanIfNeeded()
+    SIFO.ScanYieldCounter = SIFO.ScanYieldCounter + 1
+    local every = tonumber(Config.Scanner.YieldEveryFiles) or 5
+    if every < 1 then every = 1 end
+    if (SIFO.ScanYieldCounter % every) == 0 then
+        Wait(tonumber(Config.Scanner.YieldDelay) or 0)
+    end
+end
+
 function SIFO.scanFile(resource, file)
     local extension = SIFO.extensionOf(file)
     if not extension or not Config.ScanExtensions[extension] then return end
@@ -13,6 +24,7 @@ function SIFO.scanFile(resource, file)
     SIFO.scanBehavioralSecurity(resource, file, content)
     SIFO.scanCombinations(resource, file, content)
     SIFO.scanObfuscation(resource, file, content)
+    yieldScanIfNeeded()
 end
 
 function SIFO.scanMetadataFiles(resource, metadataName)
@@ -28,6 +40,7 @@ function SIFO.scanResource(resource)
     if Config.Scanner.IgnoreOwnResource and resource == SIFO.ResourceName then return end
 
     SIFO.ResourcesScanned = SIFO.ResourcesScanned + 1
+    if (SIFO.ResourcesScanned % 5) == 0 then Wait(0) end
 
     if SIFO.isResourceAllowed(resource) then
         SIFO.AllowedResources = SIFO.AllowedResources + 1
