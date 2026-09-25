@@ -78,7 +78,7 @@ function SIFO.discordRequest(webhook, payload)
     end, "POST", json.encode(payload), { ["Content-Type"] = "application/json" })
 end
 
-function SIFO.discordEmbed(webhook, title, description, color)
+function SIFO.discordEmbed(webhook, title, description, color, fields, footer)
     if not webhook or webhook == "" then return end
     SIFO.discordRequest(webhook, {
         username = "SIFO Sentinel",
@@ -86,7 +86,8 @@ function SIFO.discordEmbed(webhook, title, description, color)
             title = title,
             description = description,
             color = color,
-            footer = { text = "SIFO Sentinel • FiveM Security Scanner" },
+            fields = fields,
+            footer = footer or { text = "SIFO Sentinel • FiveM Security Scanner" },
             timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
         }}
     })
