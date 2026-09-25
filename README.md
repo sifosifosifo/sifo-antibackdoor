@@ -110,23 +110,20 @@ A finding's severity is based on the detected indicator or behavior. The score i
 
 ---
 
-## 🔔 Discord Reports
+## ⚡ Zero-Configuration Operation
 
-You can configure separate Discord webhooks for:
+SIFO Sentinel is designed to work **standalone**.
 
-- All findings
-- Critical findings
+No Discord webhook, `server.cfg` variables, external dashboard or additional setup is required for the scanner to perform its security checks.
 
-Recommended configuration through `server.cfg`:
+After installation:
 
-```cfg
-set sifo_antibackdoor_all_webhook "YOUR_ALL_WEBHOOK"
-set sifo_antibackdoor_critical_webhook "YOUR_CRITICAL_WEBHOOK"
-```
+1. Start the resource.
+2. SIFO Sentinel automatically starts its scan.
+3. Results are printed directly to the server console.
+4. Risk information is available through the built-in commands.
 
-Webhook URLs should not be committed to GitHub.
-
----
+This design keeps the core scanner independent from external services and reduces the number of configuration points that could be disabled or misconfigured.
 
 ## 🔄 Automatic Updates
 
