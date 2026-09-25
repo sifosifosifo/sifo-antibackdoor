@@ -3,8 +3,8 @@ fx_version "adamant"
 game "gta5"
 
 server_scripts {
-    "updater.lua",
     "config.lua",
+    "updater.lua",
     "trusted_sources.lua",
     "threats.lua",
     "rules.lua",
