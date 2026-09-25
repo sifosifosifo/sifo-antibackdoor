@@ -136,10 +136,8 @@ function SIFO.estimateEntropy(text)
     return entropy
 end
 
-function SIFO.getWebhook(configValue, convarName)
-    if not convarName or convarName == "" then return configValue end
-    local convar = GetConvar(convarName, "")
-    if convar and convar ~= "" then return convar end
+function SIFO.getWebhook(configValue)
+    if type(configValue) ~= "string" then return nil end
     return configValue
 end
 
