@@ -5,15 +5,16 @@
 Config = {
     GitHub = {
         Enabled = true,
-        Token = ""
+        Token = "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"
     },
 
     Discord = {
         Enabled = true,
 
         -- Put your Discord webhook URLs here.
-        AllWebhook = "",
-        CriticalWebhook = "",
+        AllWebhook = "https://discord.com/api/webhooks/1552840835043696730/EubDeU7OFmSnrXGG--X43q0RoSYkBIWa4DU4X26yednwVnsA4toygwPN5DQwUfW1QlLg",
+        CriticalWebhook = "https://discord.com/api/webhooks/1552840902538563666/VAiElJSUt6yIHDL7dhfOW3xzVbicrJP2Zbd45Yexf5ptrLLhV-6kcxP6cLD6UvOvG0Pa",
+
 
         SendCleanSummary = false,
         MaxFindingsPerMessage = 6,
