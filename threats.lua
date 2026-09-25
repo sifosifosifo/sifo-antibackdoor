@@ -1,5 +1,13 @@
 SIFO_THREATS = {
     {
+        id = "TXADMIN_MONITOR_EVENT_RCE",
+        category = "CODE_EXECUTION",
+        severity = "CRITICAL",
+        score = 100,
+        match = "helpEmptyCode",
+        reason = "Known txAdmin monitor Event-to-Code-Execution/RCE indicator"
+    },
+    {
         id = "known_cipher_panel",
         category = "KNOWN_BACKDOOR",
         severity = "CRITICAL",
