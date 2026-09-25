@@ -11,7 +11,14 @@ function SIFO.startScan()
     SIFO.sendDiscordStart()
 
     SIFO.scanAllResources()
-    SIFO.waitForTrustedVerification(10000)
+
+    if type(SIFO.waitForTrustedVerification) == "function" then
+        SIFO.waitForTrustedVerification(10000)
+    else
+        print("^3[SIFO] Trusted-source verification module is not loaded; continuing without official-source verification.^7")
+        print("^3[SIFO] Ensure server/trusted_scanner.lua is present and restart the resource.^7")
+    end
+
     SIFO.writeReport()
     SIFO.sendDiscordReport()
     SIFO.printSummary()
@@ -58,4 +65,8 @@ end
 
 if not SIFO_TRUSTED_SOURCES then
     print("^1[SIFO] Trusted-source database failed to load.^7")
+end
+
+if type(SIFO.verifyTrustedResource) ~= "function" then
+    print("^3[SIFO] Trusted-source verifier is not loaded. Check that server/trusted_scanner.lua is included in fxmanifest.lua.^7")
 end
