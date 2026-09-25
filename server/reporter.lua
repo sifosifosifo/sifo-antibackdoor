@@ -15,8 +15,8 @@ end
 function SIFO.severityStyle(severity)
     severity = SIFO.upper and SIFO.upper(severity) or string.upper(tostring(severity or "LOW"))
     if severity == "CRITICAL" then return "🚨", 15158332, "CRITICAL • IMMEDIATE ATTENTION"
-    if severity == "HIGH" then return "🔴", 16744192, "HIGH • INVESTIGATE"
-    if severity == "MEDIUM" then return "🟠", 16776960, "MEDIUM • REVIEW"
+    elseif severity == "HIGH" then return "🔴", 16744192, "HIGH • INVESTIGATE"
+    elseif severity == "MEDIUM" then return "🟠", 16776960, "MEDIUM • REVIEW"
     return "🟡", 16705372, "LOW • INFORMATION"
 end
 
