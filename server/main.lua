@@ -40,7 +40,8 @@ SIFO.CONTEXT_ONLY_THREATS = {
     entity_network_control = true,
     raw_sql_execute = true,
     client_server_trust_money = true,
-    inventory_mutation_sink = true
+    inventory_mutation_sink = true,
+    dynamic_code_assert_load = true
 }
 
 function SIFO.lower(value)
