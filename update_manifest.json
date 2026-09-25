@@ -1,11 +1,10 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "files": [
     "updater.lua",
     "version.txt",
     "update_manifest.json",
     "fxmanifest.lua",
-    "config.lua",
     "threats.lua",
     "rules.lua",
     "server/main.lua",
