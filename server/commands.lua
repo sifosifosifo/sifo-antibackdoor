@@ -47,9 +47,11 @@ AddEventHandler("onResourceStart", function(resource)
         return
     end
 
+    if SIFO.ScanRunning then return end
+
     CreateThread(function()
         Wait(750)
-        if GetResourceState(resource) == "started" then
+        if not SIFO.ScanRunning and GetResourceState(resource) == "started" then
             SIFO.scanResource(resource)
         end
     end)
