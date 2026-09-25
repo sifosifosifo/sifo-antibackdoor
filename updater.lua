@@ -1,20 +1,41 @@
 -- SIFO Anti Backdoor - automatic updater
-local UPDATE_MANIFEST_URL = "https://raw.githubusercontent.com/sifosifosifo/sifo-antibackdoor/main/update_manifest.json"
 local RESOURCE_NAME = GetCurrentResourceName()
 local LOCAL_VERSION_FILE = "version.txt"
-local function request(url, callback)
+
+local GITHUB_API_BASE = "https://api.github.com/repos/sifosifosifo/sifo-antibackdoor/contents/"
+local GITHUB_REF = "main"
+
+local function githubHeaders()
     local headers = {
         ["User-Agent"] = "SIFO-AntiBackdoor-Updater",
-        ["Accept"] = "application/vnd.github+json"
+        ["Accept"] = "application/vnd.github.raw+json",
+        ["X-GitHub-Api-Version"] = "2022-11-28"
     }
 
-    if Config and Config.GitHub and Config.GitHub.Enabled and type(Config.GitHub.Token) == "string" and Config.GitHub.Token ~= "" then
+    if Config and Config.GitHub and Config.GitHub.Enabled
+        and type(Config.GitHub.Token) == "string"
+        and Config.GitHub.Token ~= ""
+    then
         headers["Authorization"] = "Bearer " .. Config.GitHub.Token
     end
 
-    PerformHttpRequest(url, function(status, body)
+    return headers
+end
+
+local function encodePath(path)
+    return tostring(path):gsub("([^%w%._%-%/])", function(char)
+        return string.format("%%%02X", string.byte(char))
+    end)
+end
+
+local function githubFileUrl(path)
+    return GITHUB_API_BASE .. encodePath(path) .. "?ref=" .. GITHUB_REF
+end
+
+local function requestFile(path, callback)
+    PerformHttpRequest(githubFileUrl(path), function(status, body)
         callback(status, body or "")
-    end, "GET", "", headers)
+    end, "GET", "", githubHeaders())
 end
 
 local function readLocalVersion()
@@ -31,6 +52,7 @@ end
 local function isNewer(remote, localVersion)
     local ra, rb, rc = versionParts(remote)
     local la, lb, lc = versionParts(localVersion)
+
     if ra ~= la then return ra > la end
     if rb ~= lb then return rb > lb end
     return rc > lc
@@ -84,12 +106,15 @@ local function updateFiles(manifest, localVersion)
             return
         end
 
-        local url = "https://raw.githubusercontent.com/sifosifosifo/sifo-antibackdoor/main/" .. path
-
-        request(url, function(status, body)
+        requestFile(path, function(status, body)
             if status ~= 200 or body == "" then
                 failed = true
                 log(("^1Failed to download %s (HTTP %s).^7"):format(path, tostring(status)))
+
+                if status == 401 or status == 403 or status == 404 then
+                    log("^3Check Config.GitHub.Token and make sure it has Contents: Read-only access to the repository.^7")
+                end
+
                 nextFile()
                 return
             end
@@ -110,12 +135,27 @@ end
 CreateThread(function()
     Wait(1500)
 
+    if not Config or not Config.GitHub or not Config.GitHub.Enabled then
+        log("GitHub updater is disabled in config.lua.")
+        return
+    end
+
     local localVersion = readLocalVersion()
     log(("Current version: %s"):format(localVersion))
     log("Checking GitHub for updates...")
-    request(UPDATE_MANIFEST_URL, function(status, body)
+
+    if type(Config.GitHub.Token) ~= "string" or Config.GitHub.Token == "" then
+        log("^3No GitHub token configured. Private repository update checks require Config.GitHub.Token.^7")
+    end
+
+    requestFile("update_manifest.json", function(status, body)
         if status ~= 200 or body == "" then
             log(("^3Could not check GitHub for updates (HTTP %s). Continuing normally.^7"):format(tostring(status)))
+
+            if status == 401 or status == 403 or status == 404 then
+                log("^3For a private repository, verify Config.GitHub.Token and Contents: Read-only permission.^7")
+            end
+
             return
         end
 
