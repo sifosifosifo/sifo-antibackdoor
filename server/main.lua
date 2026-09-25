@@ -10,6 +10,7 @@ SIFO.VerificationStarted = {}
 SIFO.ResourcesScanned = 0
 SIFO.FilesScanned = 0
 SIFO.AllowedResources = 0
+SIFO.ScanYieldCounter = 0
 SIFO.ScanRunning = false
 
 -- Low-confidence APIs are useful as context for behavioral rules, but they are
@@ -151,4 +152,5 @@ function SIFO.reset()
     SIFO.ResourcesScanned = 0
     SIFO.FilesScanned = 0
     SIFO.AllowedResources = 0
+    SIFO.ScanYieldCounter = 0
 end
