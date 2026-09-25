@@ -169,7 +169,9 @@ function SIFO.scanTxAdminEventRCE(resource, file, content)
                     or body:match("[Pp][Cc][Aa][Ll][Ll]%s*%(%s*[Ll][Oo][Aa][Dd][Ss][Tt][Rr][Ii][Nn][Gg]%s*%(%s*" .. escapedArg .. "%s*%)") ~= nil
 
                 if directLoad and (executed or directExecution) then
-                    report("helpEmptyCode", firstArg, "load/loadstring()", "returned function executed", handlerStart)
+                    local prefix = content:sub(1, handlerStart - 1)
+                    local _, newlineCount = prefix:gsub("\n", "\n")
+                    report("helpEmptyCode", firstArg, "load/loadstring()", "returned function executed", newlineCount + 1)
                     break
                 end
             end
