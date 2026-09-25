@@ -40,12 +40,12 @@ SIFO_THREATS = {
         reason = "Known malicious infrastructure indicator"
     },
     {
-        id = "known_backdoor_marker",
-        category = "KNOWN_BACKDOOR",
+        id = "TXADMIN_ADMIN_COMPROMISE_INDICATOR",
+        category = "TXADMIN_COMPROMISE",
         severity = "CRITICAL",
         score = 100,
         match = "JohnsUrUncle",
-        reason = "Known backdoor marker"
+        reason = "Known txAdmin/admin compromise indicator; presence strongly suggests unauthorized admin/backdoor artifacts and requires immediate investigation of txAdmin, monitor, and installed resources"
     },
     {
         id = "known_backdoor_marker_2",
