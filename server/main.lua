@@ -9,6 +9,40 @@ SIFO.FilesScanned = 0
 SIFO.AllowedResources = 0
 SIFO.ScanRunning = false
 
+-- Low-confidence APIs are useful as context for behavioral rules, but they are
+-- not security findings by themselves. Keeping them out of the finding list
+-- prevents normal FiveM resources from being classified as compromised.
+SIFO.CONTEXT_ONLY_THREATS = {
+    event_register = true,
+    server_event_trigger = true,
+    client_event_trigger = true,
+    event_handler = true,
+    outbound_http = true,
+    internal_http = true,
+    http_url = true,
+    https_url = true,
+    resource_read = true,
+    convar_access = true,
+    replicated_convar_access = true,
+    debug_info = true,
+    dynamic_global = true,
+    dynamic_environment = true,
+    string_byte = true,
+    base64 = true,
+    decode64 = true,
+    from_base64 = true,
+    admin_file = true,
+    txdata = true,
+    sql_raw_concat = true,
+    sql_update = true,
+    nui_callback = true,
+    state_bag = true,
+    entity_network_control = true,
+    raw_sql_execute = true,
+    client_server_trust_money = true,
+    inventory_mutation_sink = true
+}
+
 function SIFO.lower(value)
     return string.lower(tostring(value or ""))
 end
@@ -72,6 +106,10 @@ function SIFO.addFinding(data)
         return
     end
 
+    if SIFO.CONTEXT_ONLY_THREATS[data.id] then
+        return
+    end
+
     if SIFO.isIndicatorAllowed(
         data.resource,
         data.indicator or data.id or ""
@@ -128,10 +166,15 @@ function SIFO.estimateEntropy(text)
 end
 
 function SIFO.getWebhook(configValue, convarName)
+    if not convarName or convarName == "" then
+        return configValue
+    end
+
     local convar = GetConvar(convarName, "")
     if convar and convar ~= "" then
         return convar
     end
+
     return configValue
 end
 
