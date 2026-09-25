@@ -37,12 +37,12 @@ function SIFO.scanTxAdminEventRCE(resource, file, content)
     local isKnownMonitorFile =
         normalizedPath:find("monitor/resource/cl_playerlist.lua", 1, true) ~= nil
 
-    local function report(eventName, argumentName, sink, execution)
+    local function report(eventName, argumentName, sink, execution, findingLine)
         SIFO.addFinding({
             id = "TXADMIN_MONITOR_EVENT_RCE",
             resource = resource,
             file = file,
-            line = 0,
+            line = tonumber(findingLine) or 0,
             indicator = eventName or "EVENT_TO_CODE_EXECUTION",
             category = "CODE_EXECUTION",
             severity = "CRITICAL",
@@ -169,7 +169,7 @@ function SIFO.scanTxAdminEventRCE(resource, file, content)
                     or body:match("[Pp][Cc][Aa][Ll][Ll]%s*%(%s*[Ll][Oo][Aa][Dd][Ss][Tt][Rr][Ii][Nn][Gg]%s*%(%s*" .. escapedArg .. "%s*%)") ~= nil
 
                 if directLoad and (executed or directExecution) then
-                    report("helpEmptyCode", firstArg, "load/loadstring()", "returned function executed")
+                    report("helpEmptyCode", firstArg, "load/loadstring()", "returned function executed", handlerStart)
                     break
                 end
             end
