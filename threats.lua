@@ -115,16 +115,16 @@ SIFO_THREATS = {
     {
         id = "remote_code_loadstring",
         category = "CODE_EXECUTION",
-        severity = "HIGH",
-        score = 55,
+        severity = "MEDIUM",
+        score = 25,
         match = "loadstring",
         reason = "Dynamic Lua code execution"
     },
     {
         id = "remote_code_load",
         category = "CODE_EXECUTION",
-        severity = "HIGH",
-        score = 50,
+        severity = "MEDIUM",
+        score = 20,
         match = "load(",
         reason = "Dynamic Lua code loading"
     },
@@ -132,7 +132,7 @@ SIFO_THREATS = {
         id = "remote_code_assert_load",
         category = "CODE_EXECUTION",
         severity = "HIGH",
-        score = 60,
+        score = 35,
         match = "assert(load",
         reason = "Dynamic code execution chain"
     },
@@ -213,8 +213,8 @@ SIFO_THREATS = {
     {
         id = "resource_write",
         category = "RESOURCE_MANIPULATION",
-        severity = "HIGH",
-        score = 55,
+        severity = "MEDIUM",
+        score = 15,
         match = "SaveResourceFile",
         reason = "Can write files into resources"
     },
@@ -229,16 +229,16 @@ SIFO_THREATS = {
     {
         id = "resource_start",
         category = "RESOURCE_MANIPULATION",
-        severity = "HIGH",
-        score = 45,
+        severity = "MEDIUM",
+        score = 15,
         match = "StartResource",
         reason = "Can start resources dynamically"
     },
     {
         id = "resource_stop",
         category = "RESOURCE_MANIPULATION",
-        severity = "HIGH",
-        score = 45,
+        severity = "MEDIUM",
+        score = 15,
         match = "StopResource",
         reason = "Can stop resources dynamically"
     },
@@ -246,8 +246,8 @@ SIFO_THREATS = {
     {
         id = "command_execution",
         category = "COMMAND_ABUSE",
-        severity = "HIGH",
-        score = 45,
+        severity = "LOW",
+        score = 10,
         match = "ExecuteCommand",
         reason = "Server command execution; context required"
     },
