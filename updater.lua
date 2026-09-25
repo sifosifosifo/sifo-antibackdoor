@@ -2,18 +2,11 @@
 local UPDATE_MANIFEST_URL = "https://raw.githubusercontent.com/sifosifosifo/sifo-antibackdoor/main/update_manifest.json"
 local RESOURCE_NAME = GetCurrentResourceName()
 local LOCAL_VERSION_FILE = "version.txt"
-local GITHUB_TOKEN_CONVAR = "sifo_github_token"
-
 local function request(url, callback)
     local headers = {
         ["User-Agent"] = "SIFO-AntiBackdoor-Updater",
         ["Accept"] = "application/json, text/plain, */*"
     }
-
-    local token = GetConvar(GITHUB_TOKEN_CONVAR, "")
-    if token and token ~= "" then
-        headers["Authorization"] = "Bearer " .. token
-    end
 
     PerformHttpRequest(url, function(status, body)
         callback(status, body or "")
@@ -116,12 +109,6 @@ CreateThread(function()
     local localVersion = readLocalVersion()
     log(("Current version: %s"):format(localVersion))
     log("Checking GitHub for updates...")
-    if GetConvar(GITHUB_TOKEN_CONVAR, "") ~= "" then
-        log("Using authenticated GitHub access.")
-    else
-        log("No GitHub token configured; private-repository update checks may return HTTP 404.")
-    end
-
     request(UPDATE_MANIFEST_URL, function(status, body)
         if status ~= 200 or body == "" then
             log(("^3Could not check GitHub for updates (HTTP %s). Continuing normally.^7"):format(tostring(status)))
