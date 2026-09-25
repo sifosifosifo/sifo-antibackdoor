@@ -1,13 +1,13 @@
 local function getDiscordWebhook()
     if not Config.Discord.Enabled then return nil end
-    local webhook = Config.Discord.AllWebhook
+    local webhook = SIFO.getWebhook(Config.Discord.AllWebhook, Config.Discord.AllWebhookConvar)
     if type(webhook) ~= "string" or webhook == "" then return nil end
     return webhook
 end
 
 local function getCriticalWebhook()
     if not Config.Discord.Enabled then return nil end
-    local webhook = Config.Discord.CriticalWebhook
+    local webhook = SIFO.getWebhook(Config.Discord.CriticalWebhook, Config.Discord.CriticalWebhookConvar)
     if type(webhook) ~= "string" or webhook == "" then return getDiscordWebhook() end
     return webhook
 end
