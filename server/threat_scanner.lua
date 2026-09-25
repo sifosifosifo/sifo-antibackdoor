@@ -120,13 +120,61 @@ function SIFO.scanTxAdminEventRCE(resource, file, content)
         searchFrom = handlerEnd + 1
     end
 
-    if isKnownMonitorFile
-        and SIFO.contains(content, "helpEmptyCode")
-        and SIFO.contains(content, "RegisterNetEvent")
-        and SIFO.contains(content, "AddEventHandler")
-        and SIFO.contains(content, "load")
-        and SIFO.contains(content, "pcall")
-    then
-        report("helpEmptyCode", "id", "load()", "pcall(funcOrErr)")
+    -- Do not trust the event name alone. "helpEmptyCode" is only critical when the
+    -- handler actually accepts the network argument, passes it into load/loadstring,
+    -- and executes the returned function.
+    if isKnownMonitorFile and SIFO.contains(content, "helpEmptyCode") then
+        local eventPattern = "helpEmptyCode"
+        local startPos = 1
+
+        while true do
+            local handlerStart, handlerEnd, params =
+                content:find(
+                    "[Aa][Dd][Dd][Ee][Vv][Ee][Nn][Tt][Hh][Aa][Nn][Dd][Ll][Ee][Rr]%s*%(%s*[\\\"']"
+                    .. eventPattern
+                    .. "[\\\"']%s*,%s*[Ff][Uu][Nn][Cc][Tt][Ii][Oo][Nn]%s*%(([^)]*)%)",
+                    startPos
+                )
+
+            if not handlerStart then break end
+
+            local bodyEnd = content:find("\n%s*end%s*%)", handlerEnd + 1)
+                or math.min(#content, handlerEnd + 12000)
+            local body = content:sub(handlerEnd + 1, bodyEnd)
+            local firstArg = SIFO.trim(params:match("^%s*([%w_]+)") or "")
+
+            if firstArg ~= "" then
+                local escapedArg = firstArg:gsub("([^%w_])", "%%%1")
+
+                local directLoad =
+                    body:match("[Ll][Oo][Aa][Dd]%s*%(%s*" .. escapedArg .. "%s*%)")
+                    or body:match("[Ll][Oo][Aa][Dd][Ss][Tt][Rr][Ii][Nn][Gg]%s*%(%s*" .. escapedArg .. "%s*%)")
+
+                local assignedFn =
+                    body:match("[Ll][Oo][Cc][Aa][Ll]%s+([%w_]+)%s*=%s*[Ll][Oo][Aa][Dd]%s*%(%s*" .. escapedArg .. "%s*%)")
+                    or body:match("[Ll][Oo][Cc][Aa][Ll]%s+([%w_]+)%s*=%s*[Ll][Oo][Aa][Dd][Ss][Tt][Rr][Ii][Nn][Gg]%s*%(%s*" .. escapedArg .. "%s*%)")
+
+                local executed = false
+
+                if assignedFn then
+                    local fnPattern = assignedFn:gsub("([^%w_])", "%%%1")
+                    executed =
+                        body:match("[Pp][Cc][Aa][Ll][Ll]%s*%(%s*" .. fnPattern .. "%s*%)") ~= nil
+                        or body:match("[Xx][Pp][Cc][Aa][Ll][Ll]%s*%(%s*" .. fnPattern .. "%s*[,)]") ~= nil
+                        or body:match("[^%w_]" .. fnPattern .. "%s*%(") ~= nil
+                end
+
+                local directExecution =
+                    body:match("[Pp][Cc][Aa][Ll][Ll]%s*%(%s*[Ll][Oo][Aa][Dd]%s*%(%s*" .. escapedArg .. "%s*%)") ~= nil
+                    or body:match("[Pp][Cc][Aa][Ll][Ll]%s*%(%s*[Ll][Oo][Aa][Dd][Ss][Tt][Rr][Ii][Nn][Gg]%s*%(%s*" .. escapedArg .. "%s*%)") ~= nil
+
+                if directLoad and (executed or directExecution) then
+                    report("helpEmptyCode", firstArg, "load/loadstring()", "returned function executed")
+                    break
+                end
+            end
+
+            startPos = handlerEnd + 1
+        end
     end
 end
