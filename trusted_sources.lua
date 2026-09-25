@@ -38,7 +38,7 @@ SIFO_TRUSTED_SOURCES = {
 
     {
         id = "txadmin",
-        name = "txAdmin",
+        name = "monitor",
         repository = "citizenfx/txAdmin",
         ref = "master",
         resourceNames = { "txAdmin", "txadmin" },
