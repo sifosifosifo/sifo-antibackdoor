@@ -56,7 +56,6 @@ Explore the **SIFO Tebex Store** and discover the available resources.
 - 🌍 Entity / network abuse indicators
 - 📊 Risk scoring per resource
 - 🔔 Discord webhook reporting
-- 🔄 Automatic GitHub update system
 - 📁 Modular scanner architecture
 
 ---
@@ -168,19 +167,7 @@ SIFO Sentinel includes a webhook queue that:
 
 This prevents large scans from producing a flood of webhook requests and reduces `HTTP 429` errors.
 
-## 🔄 Automatic Updates
-
-SIFO Sentinel includes an automatic GitHub update checker.
-
-When the resource starts, it checks the official repository for a newer version.
-
-If an update is available:
-
-1. The new files are downloaded.
-2. The current running version remains active.
-3. The downloaded version is loaded on the next resource/server restart.
-
-### Version
+## 📦 Version
 
 Current release:
 
@@ -224,7 +211,6 @@ sifo-antibackdoor/
 ├── config.lua
 ├── threats.lua
 ├── rules.lua
-├── updater.lua
 ├── update_manifest.json
 ├── version.txt
 │
@@ -265,8 +251,6 @@ config.lua
 ```
 
 No personal SIFO Discord webhook, private webhook URL or GitHub credential is included in the public package. Customers must enter their own Discord webhooks if they want Discord reporting.
-
-For a private GitHub repository, set `Config.GitHub.Token` in `config.lua`. The updater never uses server.cfg convars.
 
 You can configure:
 
