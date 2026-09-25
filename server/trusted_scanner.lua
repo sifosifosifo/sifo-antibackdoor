@@ -111,6 +111,15 @@ function SIFO.verifyTrustedResource(resource)
     SIFO.VerificationStarted[resource] = true
     SIFO.VerificationPending = SIFO.VerificationPending + 1
 
+    local headers = {
+        ["User-Agent"] = "SIFO-Sentinel",
+        ["Accept"] = "application/vnd.github+json"
+    }
+
+    if Config and Config.GitHub and Config.GitHub.Enabled and type(Config.GitHub.Token) == "string" and Config.GitHub.Token ~= "" then
+        headers["Authorization"] = "Bearer " .. Config.GitHub.Token
+    end
+
     PerformHttpRequest(buildTreeUrl(source), function(statusCode, body)
         if statusCode ~= 200 or not body or body == "" then
             addVerification({
@@ -141,10 +150,7 @@ function SIFO.verifyTrustedResource(resource)
 
         compareResource(resource, source, treeMap(payload.tree))
         SIFO.VerificationPending = math.max(0, SIFO.VerificationPending - 1)
-    end, "GET", "", {
-        ["User-Agent"] = "SIFO-Sentinel",
-        ["Accept"] = "application/vnd.github+json"
-    })
+    end, "GET", "", headers)
 end
 
 function SIFO.waitForTrustedVerification(timeoutMs)
