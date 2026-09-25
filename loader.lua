@@ -436,6 +436,137 @@ local function scanObfuscation(resource, file, content)
     end
 end
 
+
+local function scanBehavioralSecurity(resource, file, content)
+    local whole = lower(content)
+
+    local function addBehavior(id, category, severity, score, reason, indicator)
+        addFinding({
+            id = id,
+            resource = resource,
+            file = file,
+            line = 0,
+            indicator = indicator,
+            category = category,
+            severity = severity,
+            score = score,
+            reason = reason,
+            code = "Behavioral rule matched"
+        })
+    end
+
+    if contains(whole, "performhttprequest")
+        and (contains(whole, "assert(load(")
+            or contains(whole, "loadstring")
+            or contains(whole, "load("))
+    then
+        addBehavior(
+            "BEHAVIOR_REMOTE_CODE_EXECUTION",
+            "CODE_EXECUTION",
+            "CRITICAL",
+            55,
+            "Network request and dynamic Lua execution primitives occur in the same resource file",
+            "PerformHttpRequest + load/loadstring"
+        )
+    end
+
+    if contains(whole, "registernetevent")
+        and contains(whole, "addeventhandler")
+        and (contains(whole, "addmoney")
+            or contains(whole, "additem")
+            or contains(whole, "removemoney")
+            or contains(whole, "removeitem"))
+    then
+        addBehavior(
+            "BEHAVIOR_EVENT_TO_ECONOMY",
+            "EXPLOIT",
+            "HIGH",
+            45,
+            "Network event handler reaches an economy/inventory mutation sink; validate all client-controlled arguments server-side",
+            "RegisterNetEvent + AddEventHandler + economy sink"
+        )
+    end
+
+    if contains(whole, "registernuicallback")
+        and (contains(whole, "addmoney")
+            or contains(whole, "additem")
+            or contains(whole, "removemoney")
+            or contains(whole, "removeitem"))
+    then
+        addBehavior(
+            "BEHAVIOR_NUI_TO_ECONOMY",
+            "EXPLOIT",
+            "HIGH",
+            40,
+            "NUI callback reaches an economy/inventory mutation sink; validate every value and permission",
+            "RegisterNUICallback + economy sink"
+        )
+    end
+
+    if contains(whole, "registernetevent")
+        and contains(whole, "networkgetentityfromnetworkid")
+    then
+        addBehavior(
+            "BEHAVIOR_EVENT_ENTITY_SPOOF",
+            "EXPLOIT",
+            "MEDIUM",
+            30,
+            "Network event accepts or resolves network entity identifiers; validate ownership and entity type",
+            "RegisterNetEvent + NetworkGetEntityFromNetworkId"
+        )
+    end
+
+    if contains(whole, "registernetevent")
+        and contains(whole, "addeventhandler")
+        and (contains(whole, "mysql.query")
+            or contains(whole, "mysql.async")
+            or contains(whole, "oxmysql"))
+    then
+        addBehavior(
+            "BEHAVIOR_EVENT_TO_DATABASE",
+            "EXPLOIT",
+            "MEDIUM",
+            25,
+            "Network event reaches a database sink; inspect parameterization and authorization",
+            "RegisterNetEvent + database sink"
+        )
+    end
+
+    local normalizedFile = lower(file):gsub("\\\\", "/")
+    if normalizedFile == "fxmanifest.lua"
+        or normalizedFile == "__resource.lua"
+    then
+        if contains(whole, "server_script")
+            and (contains(whole, "http://")
+                or contains(whole, "https://"))
+        then
+            addBehavior(
+                "BEHAVIOR_REMOTE_MANIFEST_DEPENDENCY",
+                "SUPPLY_CHAIN",
+                "HIGH",
+                35,
+                "Resource manifest references a network URL near server-side script declarations",
+                "Manifest + remote URL"
+            )
+        end
+    end
+
+    if contains(whole, "string.char")
+        and (contains(whole, "loadstring")
+            or contains(whole, "load(")
+            or contains(whole, "assert(load"))
+    then
+        addBehavior(
+            "BEHAVIOR_OBFUSCATED_EXECUTION",
+            "OBFUSCATION",
+            "CRITICAL",
+            60,
+            "Character construction is combined with a Lua execution sink",
+            "string.char + load/loadstring"
+        )
+    end
+end
+
 local function scanFile(resource, file)
     local extension = extensionOf(file)
 
@@ -462,6 +593,7 @@ local function scanFile(resource, file)
 
     scanThreatDatabase(resource, file, content)
     scanTxAdminEventRCE(resource, file, content)
+    scanBehavioralSecurity(resource, file, content)
     scanCombinations(resource, file, content)
     scanObfuscation(resource, file, content)
 end
@@ -977,6 +1109,21 @@ AddEventHandler(
         end)
     end
 )
+
+
+-- Runtime resource monitoring catches resources started after the initial scan.
+AddEventHandler("onResourceStart", function(resource)
+    if resource == RESOURCE_NAME then
+        return
+    end
+
+    CreateThread(function()
+        Wait(750)
+        if GetResourceState(resource) == "started" then
+            scanResource(resource)
+        end
+    end)
+end)
 
 if not SIFO_THREATS then
     print("^1[SIFO] Threat database failed to load.^7")
