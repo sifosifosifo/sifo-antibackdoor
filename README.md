@@ -323,7 +323,9 @@ Do not redistribute, resell, re-upload or claim this resource as your own withou
 
 ## 📞 Support
 
-For support and product updates, use the support/contact method provided with your SIFO Scripts purchase or distribution package.
+For support, updates, bug reports and other SIFO Scripts:
+
+**Discord:** https://discord.gg/CEw6y3SY9h
 
 ---
 
