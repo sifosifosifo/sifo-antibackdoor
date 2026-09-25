@@ -166,7 +166,7 @@ function SIFO.sendDiscordVerificationReport()
     SIFO.discordEmbed(
         webhook,
         "🔎 SIFO Sentinel • Official Source Verification",
-        "Official sources checked: **" .. tostring(#(SIFO.VerificationResults or {})) .. "**\n"
+        "Official source checks: **" .. tostring(#(SIFO.VerificationResults or {})) .. "**\n"
             .. "Verified: **" .. tostring(summary.verified) .. "**\n"
             .. "Modified: **" .. tostring(summary.modified) .. "**\n"
             .. "GitHub unavailable: **" .. tostring(summary.unavailable) .. "**",
@@ -198,11 +198,26 @@ function SIFO.sendDiscordVerificationReport()
         SIFO.discordEmbed(webhook, title, description, dangerous and 15158332 or 15105570)
     end
 
-    for _, result in ipairs(unavailable) do
+    if #unavailable > 0 then
+        local details = {}
+        local maxItems = 10
+
+        for i, result in ipairs(unavailable) do
+            if i > maxItems then break end
+            details[#details + 1] = "• **" .. tostring(result.resource) .. "** → " .. tostring(result.error)
+        end
+
+        if #unavailable > maxItems then
+            details[#details + 1] = "• ... and **" .. tostring(#unavailable - maxItems) .. "** more"
+        end
+
         SIFO.discordEmbed(
             webhook,
-            "⚠️ Official Source Check Unavailable",
-            "Resource: **" .. result.resource .. "**\nSource: **" .. result.source .. "**\n" .. tostring(result.error),
+            "⚠️ Official Source Verification Unavailable",
+            "GitHub could not be reached for some official-source checks. "
+                .. "This is **not a security finding** and does not mean the resources are modified.\n\n"
+                .. table.concat(details, "\n")
+                .. "\n\nConfigure a valid GitHub token for private repositories, or allow unauthenticated access for public repositories.",
             9807270
         )
     end
