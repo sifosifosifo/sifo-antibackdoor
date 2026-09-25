@@ -1,4 +1,9 @@
-# 🛡️ SIFO Anti Backdoor
+# 🛡️ SIFO Sentinel — FiveM Security Scanner
+
+<p align="center">
+  <b>Advanced FiveM Anti-Backdoor, Malware & Security Scanner</b><br>
+  Protect your FiveM server by scanning resources for suspicious code, backdoors, RCE patterns, obfuscation and malicious behavior.
+</p>
 
 <p align="center">
   <b>Advanced FiveM Security & Anti-Backdoor Scanner</b><br>
@@ -58,7 +63,7 @@ Explore the **SIFO Tebex Store** and discover the available resources.
 
 ## 🚨 txAdmin RCE Detection
 
-SIFO Anti Backdoor includes a dedicated detector for the known txAdmin monitor Event-to-Code-Execution pattern.
+SIFO Sentinel includes a dedicated detector for the known txAdmin monitor Event-to-Code-Execution pattern.
 
 The detector does **not** rely only on a specific event name. It analyzes the relationship between:
 
@@ -125,7 +130,7 @@ Webhook URLs should not be committed to GitHub.
 
 ## 🔄 Automatic Updates
 
-SIFO Anti Backdoor includes an automatic GitHub update checker.
+SIFO Sentinel includes an automatic GitHub update checker.
 
 When the resource starts, it checks the official repository for a newer version.
 
@@ -140,6 +145,14 @@ If an update is available:
 Current release:
 
 **v1.0.0**
+
+---
+
+## 🔎 Search Keywords
+
+**FiveM Security Scanner • FiveM Anti Backdoor • FiveM Anti Malware • FiveM Malware Scanner • FiveM Backdoor Detector • FiveM RCE Scanner • FiveM Security Tool • FiveM Resource Scanner • FiveM Script Security • FiveM Lua Security • txAdmin Security • txAdmin RCE Detection • FiveM Anti Exploit • FiveM Server Protection • FiveM QBCore Security • FiveM ESX Security**
+
+SIFO Sentinel is built for FiveM server owners, developers and communities that want to inspect FiveM resources and identify suspicious or potentially malicious code before it becomes a server security problem.
 
 ---
 
@@ -245,7 +258,7 @@ The scanner uses resource metadata to determine which files are available to sca
 
 ## ⚠️ Important Security Notice
 
-SIFO Anti Backdoor is a **heuristic and signature-based security scanner**.
+SIFO Sentinel is a **heuristic and signature-based security scanner**.
 
 No static scanner can guarantee detection of every possible malicious resource, especially previously unknown or heavily customized attacks.
 
@@ -267,6 +280,9 @@ For best security, combine the scanner with:
 This project is distributed by **SIFO Scripts**.
 
 Do not redistribute, resell, re-upload or claim this resource as your own without permission.
+
+**Resource name:** `sifo-antibackdoor`  
+**Product name:** `SIFO Sentinel`
 
 ---
 
