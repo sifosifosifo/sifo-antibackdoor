@@ -33,7 +33,7 @@ function SIFO.scanBehavioralSecurity(resource, file, content)
             or SIFO.contains(whole, "removemoney")
             or SIFO.contains(whole, "removeitem"))
     then
-        report("BEHAVIOR_EVENT_TO_ECONOMY", "EXPLOIT", "HIGH", 45,
+        report("BEHAVIOR_EVENT_TO_ECONOMY", "EXPLOIT", "LOW", 8,
             "Network event handler reaches an economy/inventory mutation sink; validate all client-controlled arguments server-side",
             "RegisterNetEvent + AddEventHandler + economy sink")
     end
@@ -44,7 +44,7 @@ function SIFO.scanBehavioralSecurity(resource, file, content)
             or SIFO.contains(whole, "removemoney")
             or SIFO.contains(whole, "removeitem"))
     then
-        report("BEHAVIOR_NUI_TO_ECONOMY", "EXPLOIT", "HIGH", 40,
+        report("BEHAVIOR_NUI_TO_ECONOMY", "EXPLOIT", "LOW", 8,
             "NUI callback reaches an economy/inventory mutation sink; validate every value and permission",
             "RegisterNUICallback + economy sink")
     end
@@ -52,7 +52,7 @@ function SIFO.scanBehavioralSecurity(resource, file, content)
     if SIFO.contains(whole, "registernetevent")
         and SIFO.contains(whole, "networkgetentityfromnetworkid")
     then
-        report("BEHAVIOR_EVENT_ENTITY_SPOOF", "EXPLOIT", "MEDIUM", 30,
+        report("BEHAVIOR_EVENT_ENTITY_SPOOF", "EXPLOIT", "LOW", 6,
             "Network event accepts or resolves network entity identifiers; validate ownership and entity type",
             "RegisterNetEvent + NetworkGetEntityFromNetworkId")
     end
@@ -63,7 +63,7 @@ function SIFO.scanBehavioralSecurity(resource, file, content)
             or SIFO.contains(whole, "mysql.async")
             or SIFO.contains(whole, "oxmysql"))
     then
-        report("BEHAVIOR_EVENT_TO_DATABASE", "EXPLOIT", "MEDIUM", 25,
+        report("BEHAVIOR_EVENT_TO_DATABASE", "EXPLOIT", "LOW", 6,
             "Network event reaches a database sink; inspect parameterization and authorization",
             "RegisterNetEvent + database sink")
     end
