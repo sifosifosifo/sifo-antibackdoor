@@ -342,14 +342,6 @@ SIFO_THREATS = {
 
 
     {
-        id = "permissions_marker",
-        category = "AUTHORIZATION",
-        severity = "MEDIUM",
-        score = 15,
-        match = "all_permissions",
-        reason = "Broad permission marker; inspect surrounding authorization logic"
-    },
-    {
         id = "admin_file",
         category = "AUTHORIZATION",
         severity = "MEDIUM",
