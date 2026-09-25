@@ -4,6 +4,7 @@ game "gta5"
 
 server_scripts {
     "config.lua",
+    "updater.lua",
     "trusted_sources.lua",
     "threats.lua",
     "rules.lua",
