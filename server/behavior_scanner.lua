@@ -16,13 +16,32 @@ function SIFO.scanBehavioralSecurity(resource, file, content)
         })
     end
 
-    if SIFO.contains(whole, "performhttprequest")
-        and (SIFO.contains(whole, "assert(load(")
-            or SIFO.contains(whole, "loadstring")
-            or SIFO.contains(whole, "load("))
-    then
-        report("BEHAVIOR_REMOTE_CODE_EXECUTION", "CODE_EXECUTION", "CRITICAL", 55,
-            "Network request and dynamic Lua execution primitives occur in the same resource file",
+    -- HTTP + dynamic execution in the same file is suspicious, but not proof of a
+    -- remote-code-execution chain. Escalate only when the HTTP response/body is
+    -- visibly passed into the execution sink.
+    local hasHttp = SIFO.contains(whole, "performhttprequest")
+    local hasDynamic = SIFO.contains(whole, "load(")
+        or SIFO.contains(whole, "loadstring")
+        or SIFO.contains(whole, "assert(load(")
+
+    local remoteBodyExecution =
+        SIFO.contains(whole, "load(body)")
+        or SIFO.contains(whole, "load(response)")
+        or SIFO.contains(whole, "load(result)")
+        or SIFO.contains(whole, "loadstring(body)")
+        or SIFO.contains(whole, "loadstring(response)")
+        or SIFO.contains(whole, "loadstring(result)")
+        or SIFO.contains(whole, "assert(load(body)")
+        or SIFO.contains(whole, "assert(load(response)")
+        or SIFO.contains(whole, "assert(load(result)")
+
+    if hasHttp and hasDynamic and remoteBodyExecution then
+        report("BEHAVIOR_REMOTE_CODE_EXECUTION", "CODE_EXECUTION", "CRITICAL", 90,
+            "Network response/body is directly passed to a dynamic Lua execution sink",
+            "HTTP response + load/loadstring")
+    elseif hasHttp and hasDynamic then
+        report("BEHAVIOR_REMOTE_CODE_LOADER", "CODE_EXECUTION", "HIGH", 30,
+            "Network request and dynamic Lua execution occur in the same file; inspect data flow",
             "PerformHttpRequest + load/loadstring")
     end
 
