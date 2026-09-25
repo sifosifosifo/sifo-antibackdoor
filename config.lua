@@ -3,6 +3,11 @@
 -- No server.cfg / convar setup is required.
 
 Config = {
+    GitHub = {
+        Enabled = true,
+        Token = ""
+    },
+
     Discord = {
         Enabled = true,
 
@@ -25,7 +30,11 @@ Config = {
         LongLineLength = 1800,
         HugeStringLength = 900,
         EntropyMinLength = 300,
-        EntropyThreshold = 4.6
+        EntropyThreshold = 4.6,
+
+        -- Yield during large scans so the FiveM server thread stays responsive.
+        YieldEveryFiles = 5,
+        YieldDelay = 0
     },
 
     LocalReport = {
