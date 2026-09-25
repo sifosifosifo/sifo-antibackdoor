@@ -1,13 +1,17 @@
 fx_version "adamant"
 
--- Eyes Anti Backdoor / Support
--- discord.gg/EkwWvFS
-
 game "gta5"
 
 server_scripts {
     "config.lua",
     "threats.lua",
     "rules.lua",
-    "loader.lua"
+
+    "server/main.lua",
+    "server/threat_scanner.lua",
+    "server/behavior_scanner.lua",
+    "server/rules_scanner.lua",
+    "server/resource_scanner.lua",
+    "server/reporter.lua",
+    "server/commands.lua"
 }
