@@ -8,10 +8,13 @@ function SIFO.startScan()
     SIFO.reset()
 
     print("^5[SIFO] Threat intelligence scan started...^7")
+    SIFO.sendDiscordStart()
+
     SIFO.scanAllResources()
     SIFO.writeReport()
     SIFO.sendDiscordReport()
     SIFO.printSummary()
+
     SIFO.ScanRunning = false
 end
 
