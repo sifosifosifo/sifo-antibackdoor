@@ -274,7 +274,7 @@ Do not redistribute, resell, re-upload or claim this resource as your own withou
 
 For support, updates, bug reports and other SIFO Scripts:
 
-**Discord:** https://discord.gg/EkwWvFS
+**Discord:** https://discord.gg/CEw6y3SY9h
 
 ---
 
