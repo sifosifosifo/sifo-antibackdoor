@@ -113,44 +113,75 @@ function SIFO.verifyTrustedResource(resource)
 
     local headers = {
         ["User-Agent"] = "SIFO-Sentinel",
-        ["Accept"] = "application/vnd.github+json"
+        ["Accept"] = "application/vnd.github+json",
+        ["X-GitHub-Api-Version"] = "2022-11-28"
     }
 
-    if Config and Config.GitHub and Config.GitHub.Enabled and type(Config.GitHub.Token) == "string" and Config.GitHub.Token ~= "" then
+    local tokenConfigured = false
+    if Config and Config.GitHub and Config.GitHub.Enabled
+        and type(Config.GitHub.Token) == "string"
+        and Config.GitHub.Token ~= ""
+    then
         headers["Authorization"] = "Bearer " .. Config.GitHub.Token
+        tokenConfigured = true
     end
 
-    PerformHttpRequest(buildTreeUrl(source), function(statusCode, body)
-        if statusCode ~= 200 or not body or body == "" then
-            addVerification({
-                resource = resource,
-                source = source.name,
-                repository = source.repository,
-                ref = source.ref or "main",
-                status = "UNAVAILABLE",
-                error = "GitHub tree request failed (HTTP " .. tostring(statusCode) .. ")"
-            })
-            SIFO.VerificationPending = math.max(0, SIFO.VerificationPending - 1)
-            return
-        end
-
-        local ok, payload = pcall(json.decode, body)
-        if not ok or type(payload) ~= "table" or type(payload.tree) ~= "table" then
-            addVerification({
-                resource = resource,
-                source = source.name,
-                repository = source.repository,
-                ref = source.ref or "main",
-                status = "UNAVAILABLE",
-                error = "GitHub returned an invalid tree response"
-            })
-            SIFO.VerificationPending = math.max(0, SIFO.VerificationPending - 1)
-            return
-        end
-
-        compareResource(resource, source, treeMap(payload.tree))
+    local function unavailable(statusCode, detail)
+        addVerification({
+            resource = resource,
+            source = source.name,
+            repository = source.repository,
+            ref = source.ref or "main",
+            status = "UNAVAILABLE",
+            error = detail or ("GitHub tree request failed (HTTP " .. tostring(statusCode) .. ")")
+        })
         SIFO.VerificationPending = math.max(0, SIFO.VerificationPending - 1)
-    end, "GET", "", headers)
+    end
+
+    local function requestTree(useAuth)
+        local requestHeaders = headers
+
+        if not useAuth then
+            requestHeaders = {
+                ["User-Agent"] = "SIFO-Sentinel",
+                ["Accept"] = "application/vnd.github+json",
+                ["X-GitHub-Api-Version"] = "2022-11-28"
+            }
+        end
+
+        PerformHttpRequest(buildTreeUrl(source), function(statusCode, body)
+            -- Trusted QBCore/Overextended/Qbox repositories are public.
+            -- If a configured token is invalid, GitHub returns 401/403 and can
+            -- prevent otherwise-public source verification. Retry once without
+            -- Authorization so public sources remain verifiable.
+            if (statusCode == 401 or statusCode == 403) and useAuth then
+                requestTree(false)
+                return
+            end
+
+            if statusCode ~= 200 or not body or body == "" then
+                local detail = "GitHub tree request failed (HTTP " .. tostring(statusCode) .. ")"
+                if statusCode == 401 and tokenConfigured then
+                    detail = detail .. " - configured GitHub token was rejected"
+                elseif statusCode == 403 and tokenConfigured then
+                    detail = detail .. " - GitHub denied the authenticated request"
+                end
+                unavailable(statusCode, detail)
+                return
+            end
+
+            local ok, payload = pcall(json.decode, body)
+            if not ok or type(payload) ~= "table" or type(payload.tree) ~= "table" then
+                unavailable(statusCode, "GitHub returned an invalid tree response")
+                return
+            end
+
+            compareResource(resource, source, treeMap(payload.tree))
+            SIFO.VerificationPending = math.max(0, SIFO.VerificationPending - 1)
+        end, "GET", "", requestHeaders)
+    end
+
+    requestTree(tokenConfigured)
 end
 
 function SIFO.waitForTrustedVerification(timeoutMs)
