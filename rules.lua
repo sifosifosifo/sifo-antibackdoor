@@ -3,32 +3,32 @@ SIFO_COMBINATION_RULES = {
         id = "remote_loader_network",
         name = "Remote code loader + network",
         required = {"loadstring", "PerformHttpRequest"},
-        score = 40,
-        severity = "CRITICAL",
-        category = "BACKDOOR"
+        score = 25,
+        severity = "HIGH",
+        category = "CODE_EXECUTION"
     },
     {
         id = "remote_loader_file",
         name = "Remote code loader + resource file access",
         required = {"loadstring", "LoadResourceFile"},
-        score = 35,
-        severity = "CRITICAL",
-        category = "BACKDOOR"
+        score = 25,
+        severity = "HIGH",
+        category = "CODE_EXECUTION"
     },
     {
         id = "remote_loader_obfuscation",
         name = "Dynamic code + string obfuscation",
         required = {"loadstring", "string.char"},
-        score = 35,
-        severity = "CRITICAL",
+        score = 25,
+        severity = "HIGH",
         category = "OBFUSCATION"
     },
     {
         id = "remote_loader_base64",
         name = "Dynamic code + Base64 decoding",
         required = {"loadstring", "base64"},
-        score = 35,
-        severity = "CRITICAL",
+        score = 25,
+        severity = "HIGH",
         category = "OBFUSCATION"
     },
     {
@@ -76,24 +76,24 @@ SIFO_COMBINATION_RULES = {
         id = "http_download_execute",
         name = "Network request + dynamic code execution",
         required = {"PerformHttpRequest", "load("},
-        score = 45,
-        severity = "CRITICAL",
-        category = "BACKDOOR"
+        score = 30,
+        severity = "HIGH",
+        category = "CODE_EXECUTION"
     },
     {
         id = "http_download_loadstring",
         name = "Network request + loadstring execution",
         required = {"PerformHttpRequest", "loadstring"},
-        score = 45,
-        severity = "CRITICAL",
-        category = "BACKDOOR"
+        score = 30,
+        severity = "HIGH",
+        category = "CODE_EXECUTION"
     },
     {
         id = "assert_load_network",
         name = "Network request + assert(load())",
         required = {"PerformHttpRequest", "assert(load("},
-        score = 55,
-        severity = "CRITICAL",
+        score = 35,
+        severity = "HIGH",
         category = "CODE_EXECUTION"
     },
     {
