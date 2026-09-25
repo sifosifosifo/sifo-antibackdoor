@@ -74,10 +74,10 @@ SIFO_THREATS = {
     {
         id = "known_permission_marker",
         category = "KNOWN_BACKDOOR",
-        severity = "CRITICAL",
-        score = 100,
+        severity = "MEDIUM",
+        score = 20,
         match = "all_permissions",
-        reason = "Known malicious permission marker"
+        reason = "Broad permission marker; legitimate admin frameworks may use this, so context is required"
     },
     {
         id = "resource_exclude_list",
@@ -393,10 +393,10 @@ SIFO_THREATS = {
     {
         id = "permissions_marker",
         category = "AUTHORIZATION",
-        severity = "HIGH",
-        score = 50,
+        severity = "MEDIUM",
+        score = 15,
         match = "all_permissions",
-        reason = "Permission bypass/backdoor marker"
+        reason = "Broad permission marker; inspect surrounding authorization logic"
     },
     {
         id = "admin_file",
