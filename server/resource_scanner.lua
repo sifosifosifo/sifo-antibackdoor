@@ -9,6 +9,7 @@ function SIFO.scanFile(resource, file)
     SIFO.FilesScanned = SIFO.FilesScanned + 1
     SIFO.scanThreatDatabase(resource, file, content)
     SIFO.scanTxAdminEventRCE(resource, file, content)
+    SIFO.scanTxAdminTampering(resource, file, content)
     SIFO.scanBehavioralSecurity(resource, file, content)
     SIFO.scanCombinations(resource, file, content)
     SIFO.scanObfuscation(resource, file, content)
