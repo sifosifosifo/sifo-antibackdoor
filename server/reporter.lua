@@ -1,13 +1,28 @@
+local function getDiscordWebhook()
+    if not Config.Discord.Enabled then return nil end
+    local webhook = Config.Discord.AllWebhook
+    if type(webhook) ~= "string" or webhook == "" then return nil end
+    return webhook
+end
+
+local function getCriticalWebhook()
+    if not Config.Discord.Enabled then return nil end
+    local webhook = Config.Discord.CriticalWebhook
+    if type(webhook) ~= "string" or webhook == "" then
+        return getDiscordWebhook()
+    end
+    return webhook
+end
+
 function SIFO.formatFinding(finding)
     local location = tostring(finding.resource) .. "/" .. tostring(finding.file)
-
     if tonumber(finding.line) and finding.line > 0 then
         location = location .. ":" .. tostring(finding.line)
     end
 
-    return "**" .. tostring(finding.severity)
-        .. " | " .. tostring(finding.category)
-        .. " | +" .. tostring(finding.score) .. "**\n"
+    return "**" .. tostring(finding.severity) .. " | "
+        .. tostring(finding.category) .. " | +"
+        .. tostring(finding.score) .. "**\n"
         .. location
         .. "\nIndicator: [" .. tostring(finding.indicator) .. "]"
         .. "\nReason: " .. tostring(finding.reason)
@@ -30,19 +45,35 @@ function SIFO.discordEmbed(webhook, title, description, color)
     if not webhook or webhook == "" then return end
 
     SIFO.discordRequest(webhook, {
-        username = "SIFO Anti Backdoor",
+        username = "SIFO Sentinel",
         embeds = {{
             title = title,
             description = description,
             color = color,
-            footer = { text = "SIFO Anti Backdoor" },
+            footer = { text = "SIFO Sentinel • FiveM Security Scanner" },
             timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
         }}
     })
 end
 
+function SIFO.sendDiscordStart()
+    local webhook = getDiscordWebhook()
+    if not webhook then
+        print("^3[SIFO] Discord reporting is enabled but AllWebhook is empty.^7")
+        return
+    end
+
+    SIFO.discordEmbed(
+        webhook,
+        "🛡️ SIFO Sentinel • Scan Started",
+        "A new FiveM security scan has started.\nThe scanner is analyzing server resources now.",
+        3447003
+    )
+end
+
 function SIFO.getCriticalFindings()
     local result = {}
+
     for _, finding in ipairs(SIFO.Findings) do
         if finding.severity == "CRITICAL"
             or finding.score >= Config.Discord.MinScoreForCritical
@@ -50,15 +81,44 @@ function SIFO.getCriticalFindings()
             result[#result + 1] = finding
         end
     end
+
+    table.sort(result, function(a, b)
+        return (tonumber(a.score) or 0) > (tonumber(b.score) or 0)
+    end)
+
     return result
 end
 
-function SIFO.sendDiscordList(webhook, title, list, color)
+function SIFO.getHighFindings()
+    local result = {}
+
+    for _, finding in ipairs(SIFO.Findings) do
+        if finding.severity == "HIGH"
+            and finding.score < Config.Discord.MinScoreForCritical
+        then
+            result[#result + 1] = finding
+        end
+    end
+
+    table.sort(result, function(a, b)
+        return (tonumber(a.score) or 0) > (tonumber(b.score) or 0)
+    end)
+
+    return result
+end
+
+function SIFO.sendDiscordList(webhook, title, list, color, limit)
     if not webhook or webhook == "" or #list == 0 then return end
 
+    local maxItems = limit or Config.Discord.MaxFindingsPerMessage or 6
     local chunk = {}
+    local sent = 0
+
     for _, finding in ipairs(list) do
+        if sent >= maxItems then break end
+
         chunk[#chunk + 1] = SIFO.formatFinding(finding)
+        sent = sent + 1
 
         if #chunk >= Config.Discord.MaxFindingsPerMessage then
             SIFO.discordEmbed(webhook, title, table.concat(chunk, "\n\n"), color)
@@ -72,8 +132,62 @@ function SIFO.sendDiscordList(webhook, title, list, color)
 end
 
 function SIFO.sendDiscordReport()
-    -- Standalone build: no external webhook or server.cfg configuration.
-    return
+    local allWebhook = getDiscordWebhook()
+    local criticalWebhook = getCriticalWebhook()
+
+    if not allWebhook and not criticalWebhook then
+        print("^3[SIFO] Discord report skipped: no webhook configured.^7")
+        return
+    end
+
+    local counts = { CRITICAL = 0, HIGH = 0, MEDIUM = 0, LOW = 0 }
+
+    for _, finding in ipairs(SIFO.Findings) do
+        counts[finding.severity] = (counts[finding.severity] or 0) + 1
+    end
+
+    local summaryWebhook = allWebhook or criticalWebhook
+    local summary = table.concat({
+        "**Scan completed successfully.**",
+        "",
+        "Resources scanned: **" .. tostring(SIFO.ResourcesScanned) .. "**",
+        "Files scanned: **" .. tostring(SIFO.FilesScanned) .. "**",
+        "Findings: **" .. tostring(#SIFO.Findings) .. "**",
+        "",
+        "Critical: **" .. tostring(counts.CRITICAL) .. "**",
+        "High: **" .. tostring(counts.HIGH) .. "**",
+        "Medium: **" .. tostring(counts.MEDIUM) .. "**",
+        "Low: **" .. tostring(counts.LOW) .. "**"
+    }, "\n")
+
+    SIFO.discordEmbed(
+        summaryWebhook,
+        "📊 SIFO Sentinel • Scan Complete",
+        summary,
+        counts.CRITICAL > 0 and 15158332 or 3066993
+    )
+
+    local critical = SIFO.getCriticalFindings()
+    if #critical > 0 then
+        SIFO.sendDiscordList(
+            criticalWebhook or allWebhook,
+            "🚨 Critical Security Findings",
+            critical,
+            15158332,
+            12
+        )
+    end
+
+    local high = SIFO.getHighFindings()
+    if #high > 0 then
+        SIFO.sendDiscordList(
+            allWebhook or criticalWebhook,
+            "⚠️ Important High Findings",
+            high,
+            15105570,
+            8
+        )
+    end
 end
 
 function SIFO.writeReport()
