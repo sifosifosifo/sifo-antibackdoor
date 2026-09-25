@@ -216,10 +216,25 @@ local function scanTxAdminEventRCE(resource, file, content)
 
     -- Known txAdmin monitor IOC. The name alone is not enough for the
     -- behavioral rule, so require the complete event-to-load-to-execution chain.
-    for eventName, params, handlerStart in content:gmatch(
-        "[Aa][Dd][Dd][Ee][Vv][Ee][Nn][Tt][Hh][Aa][Nn][Dd][Ll][Ee][Rr]%s*%(%s*[\"']([^\"']+)[\"']%s*,%s*[Ff][Uu][Nn][Cc][Tt][Ii][Oo][Nn]%s*%(([^)]*)%)"
-    ) do
-        local body = content:sub(handlerStart or 1, (handlerStart or 1) + 12000)
+    local handlerPattern =
+        "[Aa][Dd][Dd][Ee][Vv][Ee][Nn][Tt][Hh][Aa][Nn][Dd][Ll][Ee][Rr]%s*%(%s*[\\\"']([^\\\"']+)[\\\"']%s*,%s*[Ff][Uu][Nn][Cc][Tt][Ii][Oo][Nn]%s*%(([^)]*)%)"
+
+    local searchFrom = 1
+
+    while true do
+        local handlerStart, handlerEnd, eventName, params =
+            content:find(handlerPattern, searchFrom)
+
+        if not handlerStart then
+            break
+        end
+
+        -- Bound analysis to this handler instead of the whole file to reduce
+        -- false positives from unrelated events/functions.
+        local bodyEnd = content:find("\n%s*end%s*%)", handlerEnd + 1)
+            or math.min(#content, handlerEnd + 12000)
+        local body = content:sub(handlerEnd + 1, bodyEnd)
+
         local firstArg = trim(params:match("^%s*([%w_]+)") or "")
 
         if firstArg ~= "" then
@@ -236,26 +251,29 @@ local function scanTxAdminEventRCE(resource, file, content)
                     body:match("[Ll][Oo][Cc][Aa][Ll]%s+([%w_]+)%s*=%s*[Ll][Oo][Aa][Dd]%s*%(%s*"..escapedArg.."%s*%)")
                     or body:match("[Ll][Oo][Cc][Aa][Ll]%s+([%w_]+)%s*=%s*[Ll][Oo][Aa][Dd][Ss][Tt][Rr][Ii][Nn][Gg]%s*%(%s*"..escapedArg.."%s*%)")
 
+                local fnPattern = returnedFn
+                    and returnedFn:gsub("([^%w_])", "%%%1")
+
                 local executed =
-                    returnedFn
+                    fnPattern
                     and (
-                        body:match("[Pp][Cc][Aa][Ll][Ll]%s*%(%s*"..returnedFn:gsub("([^%w_])", "%%%1").."%s*%)")
-                        or body:match("[Xx][Pp][Cc][Aa][Ll][Ll]%s*%(%s*"..returnedFn:gsub("([^%w_])", "%%%1").."%s*[,)]")
-                        or body:match("[^%w_]"..returnedFn:gsub("([^%w_])", "%%%1").."%s*%(")
+                        body:match("[Pp][Cc][Aa][Ll][Ll]%s*%(%s*"..fnPattern.."%s*%)")
+                        or body:match("[Xx][Pp][Cc][Aa][Ll][Ll]%s*%(%s*"..fnPattern.."%s*[,)]")
+                        or body:match("[^%w_]"..fnPattern.."%s*%(")
                     )
+
                 local directExecution =
                     body:match("[Pp][Cc][Aa][Ll][Ll]%s*%(%s*[Ll][Oo][Aa][Dd]%s*%(%s*"..escapedArg.."%s*%)")
                     or body:match("[Pp][Cc][Aa][Ll][Ll]%s*%(%s*[Ll][Oo][Aa][Dd][Ss][Tt][Rr][Ii][Nn][Gg]%s*%(%s*"..escapedArg.."%s*%)")
 
                 if executed or directExecution then
+                    local eventPattern = eventName:gsub("([^%w_])", "%%%1")
                     local registered =
-                        body:find("[Rr][Ee][Gg][Ii][Ss][Tt][Ee][Rr][Nn][Ee][Tt][Ee][Vv][Ee][Nn][Tt]", 1, false)
-                        or content:find(
-                            "[Rr][Ee][Gg][Ii][Ss][Tt][Ee][Rr][Nn][Ee][Tt][Ee][Vv][Ee][Nn][Tt]%s*%(%s*[\"']"
-                            .. eventName:gsub("([^%w_])", "%%%1")
-                            .. "[\"']",
-                            1,
-                            false
+                        content:find(
+                            "[Rr][Ee][Gg][Ii][Ss][Tt][Ee][Rr][Nn][Ee][Tt][Ee][Vv][Ee][Nn][Tt]%s*%(%s*[\\\"']"
+                            .. eventPattern
+                            .. "[\\\"']",
+                            1
                         )
 
                     if registered then
@@ -269,6 +287,8 @@ local function scanTxAdminEventRCE(resource, file, content)
                 end
             end
         end
+
+        searchFrom = handlerEnd + 1
     end
 
     -- Strong known-file fallback: require the known IOC plus all critical
