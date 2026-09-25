@@ -11,6 +11,7 @@ function SIFO.startScan()
     SIFO.sendDiscordStart()
 
     SIFO.scanAllResources()
+    SIFO.waitForTrustedVerification(10000)
     SIFO.writeReport()
     SIFO.sendDiscordReport()
     SIFO.printSummary()
@@ -36,7 +37,6 @@ AddEventHandler("onResourceStart", function(resource)
             Wait(Config.Scanner.ScanDelay)
             SIFO.startScan()
         end)
-
         return
     end
 
@@ -54,4 +54,8 @@ end
 
 if not SIFO_COMBINATION_RULES then
     print("^1[SIFO] Combination rules failed to load.^7")
+end
+
+if not SIFO_TRUSTED_SOURCES then
+    print("^1[SIFO] Trusted-source database failed to load.^7")
 end
