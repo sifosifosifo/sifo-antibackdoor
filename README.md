@@ -114,7 +114,7 @@ A finding's severity is based on the detected indicator or behavior. The score i
 
 SIFO Sentinel is designed to work **standalone**.
 
-No Discord webhook, `server.cfg` variables, external dashboard or additional setup is required for the scanner to perform its security checks.
+No Discord webhook is required for the scanner itself. If Discord reporting is enabled, webhook URLs are configured directly in `config.lua`; no Discord webhook convars are used.
 
 After installation:
 
@@ -141,7 +141,7 @@ If an update is available:
 
 Current release:
 
-**v1.0.0**
+**v1.0.11**
 
 ---
 
@@ -223,7 +223,7 @@ config.lua
 
 You can configure:
 
-- Discord reporting
+- Discord reporting and webhook URLs
 - Scan delay
 - Automatic scanning
 - Resource allowlist
