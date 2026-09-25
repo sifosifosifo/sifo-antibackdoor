@@ -61,6 +61,22 @@ Explore the **SIFO Tebex Store** and discover the available resources.
 
 ---
 
+## 🖼️ Preview
+
+### Server Console
+
+> Add your console screenshot here.
+
+![SIFO Sentinel Console](docs/images/console.png)
+
+### Discord Alerts
+
+> Add your Discord alert screenshot here.
+
+![SIFO Sentinel Discord](docs/images/discord.png)
+
+---
+
 ## 🚨 txAdmin RCE Detection
 
 SIFO Sentinel includes a dedicated detector for the known txAdmin monitor Event-to-Code-Execution pattern.
@@ -75,22 +91,25 @@ The known `monitor/resource/cl_playerlist.lua` pattern is also recognized and re
 
 ---
 
-## 🧠 Behavioral Detection
+## 🧠 Behavioral Detection & Correlation
 
 The scanner does not automatically consider every FiveM API malicious.
 
-Instead, it combines related indicators and analyzes suspicious behavior such as:
+SIFO Sentinel separates weak standalone indicators from actionable behavioral findings. Related indicators are correlated before they are treated as a higher-confidence security issue.
 
-- Network request + dynamic code execution
-- Downloaded content + code execution
-- Network event + money/inventory manipulation
-- NUI callback + sensitive server-side action
-- Network event + entity lookup/control
-- Network event + database execution
-- Obfuscated strings + dynamic execution
-- Remote manifest dependencies
+Examples of stronger behavioral chains include:
 
-This approach helps reduce false positives from legitimate resources.
+- Network-controlled input → `load/loadstring` → execution
+- HTTP response/body → dynamic Lua execution
+- Obfuscated/constructed data → dynamic execution
+- Network event → sensitive server-side action
+- NUI callback → sensitive server-side action
+- Network event → entity lookup/control
+- Network event → database execution
+
+A remote URL or manifest dependency by itself is treated as a low-confidence indicator, rather than automatically producing a HIGH alert. This helps reduce false positives from legitimate resources that use remote dependencies.
+
+The goal is to keep strong RCE/backdoor detections visible while reducing noisy alerts from common FiveM APIs and legitimate resource behavior.
 
 ---
 
@@ -125,6 +144,20 @@ After installation:
 
 This design keeps the core scanner independent from external services and reduces the number of configuration points that could be disabled or misconfigured.
 
+## 🔔 Discord Reporting & Rate-Limit Protection
+
+Discord reporting is optional and configured only through `config.lua`.
+
+SIFO Sentinel includes a webhook queue that:
+
+- Queues outgoing Discord alerts instead of sending large bursts.
+- Batches multiple findings into Discord messages where possible.
+- Respects Discord `429` rate-limit responses.
+- Uses the server-provided retry delay when available.
+- Requeues rate-limited alerts instead of silently dropping them.
+
+This prevents large scans from producing a flood of webhook requests and reduces `HTTP 429` errors.
+
 ## 🔄 Automatic Updates
 
 SIFO Sentinel includes an automatic GitHub update checker.
@@ -141,7 +174,7 @@ If an update is available:
 
 Current release:
 
-**v1.0.12**
+**v1.0.13**
 
 ---
 
@@ -221,6 +254,8 @@ All settings are located in:
 config.lua
 ```
 
+No personal SIFO Discord webhook, private webhook URL or GitHub credential is included in the public package. Customers must enter their own Discord webhooks if they want Discord reporting.
+
 For a private GitHub repository, set `Config.GitHub.Token` in `config.lua`. The updater never uses server.cfg convars.
 
 You can configure:
@@ -288,9 +323,7 @@ Do not redistribute, resell, re-upload or claim this resource as your own withou
 
 ## 📞 Support
 
-For support, updates, bug reports and other SIFO Scripts:
-
-**Discord:** https://discord.gg/CEw6y3SY9h
+For support and product updates, use the support/contact method provided with your SIFO Scripts purchase or distribution package.
 
 ---
 
