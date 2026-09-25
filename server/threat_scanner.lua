@@ -106,11 +106,14 @@ function SIFO.scanTxAdminEventRCE(resource, file, content)
                     )
 
                     if registered then
+                        local prefix = content:sub(1, handlerStart - 1)
+                        local _, newlineCount = prefix:gsub("\n", "\n")
                         report(
                             eventName,
                             firstArg,
                             loadSink and "load()" or "loadstring()",
-                            returnedFn and "pcall/xpcall/fn()" or "pcall(load, ...)"
+                            returnedFn and "pcall/xpcall/fn()" or "pcall(load, ...)",
+                            newlineCount + 1
                         )
                     end
                 end
