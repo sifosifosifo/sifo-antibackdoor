@@ -10,20 +10,28 @@ function SIFO.startScan()
     print("^5[SIFO] Threat intelligence scan started...^7")
     SIFO.sendDiscordStart()
 
-    SIFO.scanAllResources()
+    local ok, err = xpcall(function()
+        SIFO.scanAllResources()
 
-    if type(SIFO.waitForTrustedVerification) == "function" then
-        SIFO.waitForTrustedVerification(10000)
-    else
-        print("^3[SIFO] Trusted-source verification module is not loaded; continuing without official-source verification.^7")
-        print("^3[SIFO] Ensure server/trusted_scanner.lua is present and restart the resource.^7")
-    end
+        if type(SIFO.waitForTrustedVerification) == "function" then
+            SIFO.waitForTrustedVerification(10000)
+        else
+            print("^3[SIFO] Trusted-source verification module is not loaded; continuing without official-source verification.^7")
+            print("^3[SIFO] Ensure server/trusted_scanner.lua is present and restart the resource.^7")
+        end
 
-    SIFO.writeReport()
-    SIFO.sendDiscordReport()
-    SIFO.printSummary()
+        SIFO.writeReport()
+        SIFO.sendDiscordReport()
+        SIFO.printSummary()
+    end, debug.traceback)
 
     SIFO.ScanRunning = false
+
+    if not ok then
+        print("^1[SIFO] Scan aborted by an internal error:^7")
+        print("^1" .. tostring(err) .. "^7")
+        print("^3[SIFO] Scan state was reset. You can run /sifo_scan again after fixing the error.^7")
+    end
 end
 
 RegisterCommand("sifo_scan", function(source)
@@ -33,6 +41,11 @@ end, false)
 
 RegisterCommand("sifo_risk", function(source)
     if source ~= 0 then return end
+    if type(SIFO.printResourceRisk) ~= "function" then
+        print("^1[SIFO] Resource risk reporter is not loaded.^7")
+        print("^3[SIFO] Check that server/reporter.lua is present in fxmanifest.lua and restart sifo-antibackdoor.^7")
+        return
+    end
     SIFO.printResourceRisk()
 end, false)
 
