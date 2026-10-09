@@ -151,6 +151,21 @@ After installation:
 
 This design keeps the core scanner independent from external services and reduces the number of configuration points that could be disabled or misconfigured.
 
+## 🔄 Automatic Updates
+
+SIFO Sentinel checks the public GitHub update manifest at startup and periodically (every 60 minutes by default). When a newer semantic version is published, it downloads the complete set of files first, preserves the customer's `config.lua`, and only then applies the update. A successful update restarts **only the SIFO Sentinel resource**, not the FiveM server.
+
+Settings are under `Config.GitHub` in `config.lua`:
+
+- `Enabled = true` enables update checks.
+- `CheckIntervalMinutes = 60` controls the interval (minimum 5 minutes).
+- `AutoRestart = true` restarts the resource after a successful update. Set it to `false` to restart manually.
+
+**Maintainer release checklist:** every published update must bump both `version.txt` and `update_manifest.json` to the same new `X.Y.Z` version. Add every runtime file that should be updated to `update_manifest.json`; do not add `config.lua`, `version.txt`, or `update_manifest.json` to its own `files` list. If the manifest version is not higher than the installed version, clients will correctly consider themselves up to date even if files were committed without a version bump.
+
+The updater validates relative file paths, downloads all listed files before replacing any, attempts rollback if a save fails, and does not record the new version until the files have been written. As with any self-updater, test updates on a staging server before deploying them to production.
+
+---
 ## 🔔 Discord Reporting & Rate-Limit Protection
 
 Discord reporting is optional and configured only through `config.lua`.
@@ -169,7 +184,7 @@ This prevents large scans from producing a flood of webhook requests and reduces
 
 Current release:
 
-**v1.0.0**
+**v1.0.2**
 
 ---
 
@@ -210,11 +225,13 @@ sifo-antibackdoor/
 ├── threats.lua
 ├── rules.lua
 ├── update_manifest.json
+├── updater.lua
 ├── version.txt
 │
 └── server/
     ├── main.lua
     ├── threat_scanner.lua
+    ├── txadmin_scanner.lua
     ├── behavior_scanner.lua
     ├── rules_scanner.lua
     ├── resource_scanner.lua
