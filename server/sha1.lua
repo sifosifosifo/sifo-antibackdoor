@@ -1,5 +1,5 @@
 -- Minimal SHA-1 implementation for Git blob verification.
--- Git blob hash = SHA1("blob " .. #content .. "\\0" .. content)
+-- Git blob hash = SHA1("blob " .. #content .. NUL .. content)
 
 local function rol(value, bits)
     return ((value << bits) | (value >> (32 - bits))) & 0xffffffff
