@@ -158,6 +158,7 @@ SIFO Sentinel checks the public GitHub update manifest at startup and periodical
 Settings are under `Config.GitHub` in `config.lua`:
 
 - `Enabled = true` enables update checks.
+- `Token = ""` optionally supplies a GitHub personal access token to increase API limits for official-source verification. Keep a real token private and never commit it to a public repository.
 - `CheckIntervalMinutes = 60` controls the interval (minimum 5 minutes).
 - `AutoRestart = true` restarts the resource after a successful update. Set it to `false` to restart manually.
 
