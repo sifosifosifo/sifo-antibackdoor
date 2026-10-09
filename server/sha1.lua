@@ -89,5 +89,5 @@ end
 
 function SIFO.gitBlobSha1(content)
     content = tostring(content or "")
-    return sha1("blob " .. tostring(#content) .. "\\0" .. content)
+    return sha1("blob " .. tostring(#content) .. string.char(0) .. content)
 end
