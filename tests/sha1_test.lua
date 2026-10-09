@@ -8,7 +8,7 @@ assert(
     "Empty file must match Git's canonical blob SHA-1"
 )
 assert(
-    SIFO.gitBlobSha1("test") == "9daeafb9864cf43055ae93beb0afd6c7d144bfa4",
+    SIFO.gitBlobSha1("test") == "30d74d258442c7c65512eafab474568dd706c430",
     "Text file must match Git's canonical blob SHA-1"
 )
 
