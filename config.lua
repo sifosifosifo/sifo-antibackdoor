@@ -5,7 +5,15 @@
 Config = {
     -- Public automatic updater. No customer token or private repository is required.
     GitHub = {
-        Enabled = true
+        Enabled = true,
+        -- Optional GitHub personal access token to raise API rate limits for official-source checks.
+        -- Keep this value private; never commit a real token to a public repository.
+        Token = "",
+        -- Check for new versions every N minutes (minimum 5).
+        CheckIntervalMinutes = 60,
+        -- Restart only this resource after a complete update so changes become active.
+        -- Set false if you prefer to restart the resource manually.
+        AutoRestart = true
     },
 
     Discord = {
@@ -14,7 +22,6 @@ Config = {
         -- Put your Discord webhook URLs here.
         AllWebhook = "",
         CriticalWebhook = "",
-
 
         SendCleanSummary = false,
         MaxFindingsPerMessage = 6,

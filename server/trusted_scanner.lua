@@ -2,6 +2,27 @@ SIFO.VerificationResults = {}
 SIFO.VerificationPending = 0
 SIFO.VerificationStarted = {}
 
+-- Serialize GitHub tree requests to avoid bursting the unauthenticated API rate limit.
+local githubRequestQueue = {}
+local githubQueueRunning = false
+
+local function enqueueGitHubRequest(task)
+    githubRequestQueue[#githubRequestQueue + 1] = task
+    if githubQueueRunning then return end
+
+    githubQueueRunning = true
+    CreateThread(function()
+        while #githubRequestQueue > 0 do
+            local nextTask = table.remove(githubRequestQueue, 1)
+            local finished = false
+            nextTask(function() finished = true end)
+            while not finished do Wait(50) end
+            Wait(500)
+        end
+        githubQueueRunning = false
+    end)
+end
+
 local function sourceForResource(resource)
     for _, source in ipairs(SIFO_TRUSTED_SOURCES or {}) do
         if source.enabled ~= false then
@@ -118,7 +139,7 @@ function SIFO.verifyTrustedResource(resource)
     }
 
     local tokenConfigured = false
-    if Config and Config.GitHub and Config.GitHub.Enabled
+    if Config and Config.GitHub
         and type(Config.GitHub.Token) == "string"
         and Config.GitHub.Token ~= ""
     then
@@ -138,7 +159,7 @@ function SIFO.verifyTrustedResource(resource)
         SIFO.VerificationPending = math.max(0, SIFO.VerificationPending - 1)
     end
 
-    local function requestTree(useAuth)
+    local function requestTree(useAuth, done)
         local requestHeaders = headers
 
         if not useAuth then
@@ -155,7 +176,7 @@ function SIFO.verifyTrustedResource(resource)
             -- prevent otherwise-public source verification. Retry once without
             -- Authorization so public sources remain verifiable.
             if (statusCode == 401 or statusCode == 403) and useAuth then
-                requestTree(false)
+                requestTree(false, done)
                 return
             end
 
@@ -167,21 +188,26 @@ function SIFO.verifyTrustedResource(resource)
                     detail = detail .. " - GitHub denied the authenticated request"
                 end
                 unavailable(statusCode, detail)
+                done()
                 return
             end
 
             local ok, payload = pcall(json.decode, body)
             if not ok or type(payload) ~= "table" or type(payload.tree) ~= "table" then
                 unavailable(statusCode, "GitHub returned an invalid tree response")
+                done()
                 return
             end
 
             compareResource(resource, source, treeMap(payload.tree))
             SIFO.VerificationPending = math.max(0, SIFO.VerificationPending - 1)
+            done()
         end, "GET", "", requestHeaders)
     end
 
-    requestTree(tokenConfigured)
+    enqueueGitHubRequest(function(done)
+        requestTree(tokenConfigured, done)
+    end)
 end
 
 function SIFO.waitForTrustedVerification(timeoutMs)

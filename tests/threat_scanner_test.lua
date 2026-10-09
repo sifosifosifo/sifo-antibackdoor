@@ -26,6 +26,7 @@ SIFO.scanTxAdminEventRCE("screenshare", "server/main.lua", malicious)
 assert(#SIFO.Findings == 1, "Expected pcall(load, eventArgument) result execution to be detected")
 assert(SIFO.Findings[1].severity == "CRITICAL", "Expected a CRITICAL finding")
 assert(SIFO.Findings[1].resource == "screenshare", "Detection must not depend on the resource being txAdmin")
+assert(SIFO.Findings[1].line == 2, "Finding line numbers must include physical blank lines correctly")
 
 SIFO.Findings = {}
 local notExecuted = [[

@@ -1,5 +1,5 @@
 -- Minimal SHA-1 implementation for Git blob verification.
--- Git blob hash = SHA1("blob " .. #content .. "\\0" .. content)
+-- Git blob hash = SHA1("blob " .. #content .. NUL .. content)
 
 local function rol(value, bits)
     return ((value << bits) | (value >> (32 - bits))) & 0xffffffff
@@ -89,5 +89,5 @@ end
 
 function SIFO.gitBlobSha1(content)
     content = tostring(content or "")
-    return sha1("blob " .. tostring(#content) .. "\\0" .. content)
+    return sha1("blob " .. tostring(#content) .. string.char(0) .. content)
 end
