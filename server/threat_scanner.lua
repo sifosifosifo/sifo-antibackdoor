@@ -15,7 +15,6 @@ function SIFO.scanThreatDatabase(resource, file, content)
                 line = line:gsub("\r$", "")
                 if SIFO.contains(line, threat.match) then
                     codeLine = line
-                    lineNumber = lineNumber
                     break
                 end
             end
