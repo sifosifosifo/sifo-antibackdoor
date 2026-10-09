@@ -65,7 +65,19 @@ SIFO.CONTEXT_ONLY_THREATS = {
     nui_inventory_sink = true,
     event_entity_lookup = true,
     sql_event_boundary = true,
-    nui_server_trust = true
+    nui_server_trust = true,
+
+    -- File-wide co-occurrence does not prove that remote data reaches execution.
+    -- Keep these weak combinations out of actionable findings; the behavioral
+    -- scanner handles direct response-to-loader evidence separately.
+    remote_loader_network = true,
+    remote_loader_file = true,
+    remote_loader_obfuscation = true,
+    remote_loader_base64 = true,
+    http_download_execute = true,
+    http_download_loadstring = true,
+    assert_load_network = true,
+    download_write_execute = true
 }
 
 function SIFO.lower(value)
