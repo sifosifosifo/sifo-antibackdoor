@@ -185,7 +185,7 @@ This prevents large scans from producing a flood of webhook requests and reduces
 
 Current release:
 
-**v1.0.2**
+**v1.0.3**
 
 ---
 
