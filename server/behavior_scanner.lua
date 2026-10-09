@@ -40,9 +40,9 @@ function SIFO.scanBehavioralSecurity(resource, file, content)
             "Network response/body is directly passed to a dynamic Lua execution sink",
             "HTTP response + load/loadstring")
     elseif hasHttp and hasDynamic then
-        report("BEHAVIOR_REMOTE_CODE_LOADER", "CODE_EXECUTION", "HIGH", 30,
-            "Network request and dynamic Lua execution occur in the same file; inspect data flow",
-            "PerformHttpRequest + load/loadstring")
+        report("BEHAVIOR_REMOTE_CODE_LOADER", "CODE_EXECUTION", "LOW", 10,
+            "Network requests and dynamic Lua loading occur in the same file, but a response-to-execution data flow was not established",
+            "PerformHttpRequest + load/loadstring (same-file context only)")
     end
 
     if SIFO.contains(whole, "registernetevent")
