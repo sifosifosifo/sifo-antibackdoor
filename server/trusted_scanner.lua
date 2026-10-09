@@ -139,7 +139,7 @@ function SIFO.verifyTrustedResource(resource)
     }
 
     local tokenConfigured = false
-    if Config and Config.GitHub and Config.GitHub.Enabled
+    if Config and Config.GitHub
         and type(Config.GitHub.Token) == "string"
         and Config.GitHub.Token ~= ""
     then
