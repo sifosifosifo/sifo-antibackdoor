@@ -81,10 +81,19 @@ function SIFO.scanTxAdminEventRCE(resource, file, content)
                 body:match("[Pp][Cc][Aa][Ll][Ll]%s*%(%s*[Ll][Oo][Aa][Dd]%s*,%s*" .. escapedArg .. "%s*%)")
                 or body:match("[Pp][Cc][Aa][Ll][Ll]%s*%(%s*[Ll][Oo][Aa][Dd][Ss][Tt][Rr][Ii][Nn][Gg]%s*,%s*" .. escapedArg .. "%s*%)")
 
+            -- pcall(loader, untrustedInput) returns (ok, compiledFunction). Track
+            -- the SECOND return value as well as the direct load(input) form.
+            -- This catches the two-step bypass:
+            -- local ok, fn = pcall(load, input); if ok then pcall(fn) end
+            local pcallReturnedFn =
+                body:match("[Ll][Oo][Cc][Aa][Ll]%s+[%w_]+%s*,%s*([%w_]+)%s*=%s*[Pp][Cc][Aa][Ll][Ll]%s*%(%s*[Ll][Oo][Aa][Dd]%s*,%s*" .. escapedArg .. "%s*%)")
+                or body:match("[Ll][Oo][Cc][Aa][Ll]%s+[%w_]+%s*,%s*([%w_]+)%s*=%s*[Pp][Cc][Aa][Ll][Ll]%s*%(%s*[Ll][Oo][Aa][Dd][Ss][Tt][Rr][Ii][Nn][Gg]%s*,%s*" .. escapedArg .. "%s*%)")
+
             if loadSink or pcallLoad then
                 local returnedFn =
                     body:match("[Ll][Oo][Cc][Aa][Ll]%s+([%w_]+)%s*=%s*[Ll][Oo][Aa][Dd]%s*%(%s*" .. escapedArg .. "%s*%)")
                     or body:match("[Ll][Oo][Cc][Aa][Ll]%s+([%w_]+)%s*=%s*[Ll][Oo][Aa][Dd][Ss][Tt][Rr][Ii][Nn][Gg]%s*%(%s*" .. escapedArg .. "%s*%)")
+                    or pcallReturnedFn
 
                 local fnPattern = returnedFn and returnedFn:gsub("([^%w_])", "%%%1")
                 local executed = fnPattern and (

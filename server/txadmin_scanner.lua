@@ -41,7 +41,9 @@ local function txFindLine(content, pattern)
 end
 
 function SIFO.scanTxAdminTampering(resource, file, content)
-    if not txIsMonitor(resource, file) then return end
+    -- Never trust a resource because it is named "monitor" or "txAdmin".
+    -- Run behavioral checks against every scanned resource; path-specific checks
+    -- below still apply only to their corresponding txAdmin files.
 
     local normalized = SIFO.lower(file):gsub("\\\\", "/")
     local lower = SIFO.lower(content)

@@ -76,15 +76,15 @@ Explore the **SIFO Tebex Store** and discover the available resources.
 
 ## 🚨 txAdmin RCE Detection
 
-SIFO Sentinel includes a dedicated detector for the known txAdmin monitor Event-to-Code-Execution pattern.
+SIFO Sentinel includes event-to-code-execution detection across **all scanned resources**, not only txAdmin's `monitor` resource. A resource name, path, vendor, or txAdmin origin is not a trust exemption.
 
 The detector does **not** rely only on a specific event name. It analyzes the relationship between:
 
-`RegisterNetEvent` → `AddEventHandler` → event argument → `load/loadstring` → function execution
+`RegisterNetEvent` → `AddEventHandler` → network-controlled argument → `load/loadstring` → execution
 
-This allows the scanner to identify renamed variants of the same dangerous behavior.
+It also tracks the two-step loader form where `pcall(load, input)` returns a compiled function into a second variable and that variable is later executed (for example, `pcall(funcOrErr)`). This closes a gap where the loader call and execution were separated across statements.
 
-The known `monitor/resource/cl_playerlist.lua` pattern is also recognized and reported as a **CRITICAL** finding.
+The known `monitor/resource/cl_playerlist.lua` pattern is also recognized and reported as a **CRITICAL** finding. Detection is static: SIFO Sentinel inspects source text and never executes a discovered payload.
 
 ---
 
