@@ -8,13 +8,18 @@ function SIFO.scanThreatDatabase(resource, file, content)
             local lineNumber = 0
             local codeLine = ""
 
-            for line in content:gmatch("[^\r\n]+") do
+            -- Preserve physical line numbers, including blank lines. The previous
+            -- pattern skipped empty lines and reported incorrect locations.
+            for line in (content .. "\n"):gmatch("(.-)\n") do
                 lineNumber = lineNumber + 1
+                line = line:gsub("\r$", "")
                 if SIFO.contains(line, threat.match) then
                     codeLine = line
+                    lineNumber = lineNumber
                     break
                 end
             end
+            lineNumber = math.max(0, lineNumber - 1)
 
             SIFO.addFinding({
                 id = threat.id,
