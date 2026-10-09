@@ -46,6 +46,7 @@ SIFO.CONTEXT_ONLY_THREATS = {
     client_server_trust_money = true,
     inventory_mutation_sink = true,
     dynamic_code_assert_load = true,
+    remote_code_assert_load = true,
 
     -- Weak standalone indicators are scanner context, not findings.
     remote_code_loadstring = true,
