@@ -19,7 +19,6 @@ function SIFO.scanThreatDatabase(resource, file, content)
                     break
                 end
             end
-            lineNumber = math.max(0, lineNumber - 1)
 
             SIFO.addFinding({
                 id = threat.id,
