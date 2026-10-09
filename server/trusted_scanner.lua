@@ -20,10 +20,6 @@ local function enqueueGitHubRequest(task)
             Wait(500)
         end
         githubQueueRunning = false
-        -- Handle a task enqueued as the queue was finishing.
-        if #githubRequestQueue > 0 then
-            enqueueGitHubRequest(function(done) done() end)
-        end
     end)
 end
 
