@@ -20,7 +20,7 @@ function SIFO.startScan()
         SIFO.scanAllResources()
 
         if type(SIFO.waitForTrustedVerification) == "function" then
-            SIFO.waitForTrustedVerification(10000)
+            SIFO.waitForTrustedVerification(60000)
         else
             print("^3[SIFO] Trusted-source verification module is not loaded; continuing without official-source verification.^7")
             print("^3[SIFO] Ensure server/trusted_scanner.lua is present and restart the resource.^7")
