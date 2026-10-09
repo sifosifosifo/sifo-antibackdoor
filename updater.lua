@@ -154,9 +154,13 @@ local function updateFiles(manifest, localVersion)
             end
 
             log(("^2Update %s downloaded and applied successfully. Customer config.lua was preserved.^7"):format(manifest.version))
-            log("^3The resource will restart automatically to activate the new files; the FiveM server will not restart.^7")
             updateInProgress = false
-            restartResourceWhenSafe()
+            if not (Config.GitHub and Config.GitHub.AutoRestart == false) then
+                log("^3The resource will restart automatically to activate the new files; the FiveM server will not restart.^7")
+                restartResourceWhenSafe()
+            else
+                log("^3Automatic resource restart is disabled. Run restart " .. RESOURCE_NAME .. " to activate the update.^7")
+            end
             return
         end
 
